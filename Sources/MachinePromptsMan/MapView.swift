@@ -47,24 +47,39 @@ enum MapLayout {
         func h(_ id: String) -> CGFloat {
             if let m = memo[id] { return m }
             let ks = under(id)
-            let sum = ks.reduce(CGFloat(0)) { $0 + h($1) + o.vgap }
-            let v = ks.isEmpty ? own(id) : max(own(id), sum - o.vgap)
+            var sum: CGFloat = 0
+            for k in ks { sum += h(k) + o.vgap }
+            let v: CGFloat = ks.isEmpty ? own(id) : max(own(id), sum - o.vgap)
             memo[id] = v
             return v
         }
         func place(_ id: String, _ depth: Int, _ y: CGFloat, _ dir: CGFloat) {
-            let ks = under(id), H = h(id)
-            let x = dir * (o.hubW / 2 + o.hgap + CGFloat(depth - 1) * (o.cardW + o.hgap) + o.cardW / 2)
-            r.pos[id] = MapPos(x: x, y: y + H / 2 - o.below(id) / 2, w: o.cardW, h: o.height(id), depth: depth, dir: dir, below: o.below(id))
-            let inner = ks.isEmpty ? 0 : ks.reduce(CGFloat(0)) { $0 + h($1) + o.vgap } - o.vgap
-            var cy = y + (H - inner) / 2
-            for k in ks { place(k, depth + 1, cy, dir); cy += h(k) + o.vgap }
+            let ks = under(id)
+            let H = h(id)
+            let step: CGFloat = CGFloat(depth - 1) * (o.cardW + o.hgap)
+            let x: CGFloat = dir * (o.hubW / 2 + o.hgap + step + o.cardW / 2)
+            let b = o.below(id)
+            r.pos[id] = MapPos(x: x, y: y + H / 2 - b / 2, w: o.cardW, h: o.height(id), depth: depth, dir: dir, below: b)
+            var inner: CGFloat = 0
+            for k in ks { inner += h(k) + o.vgap }
+            if !ks.isEmpty { inner -= o.vgap }
+            var cy: CGFloat = y + (H - inner) / 2
+            for k in ks {
+                place(k, depth + 1, cy, dir)
+                cy += h(k) + o.vgap
+            }
         }
         for side in ["r", "l"] {
             let dir: CGFloat = side == "r" ? 1 : -1
             let list = sides[side] ?? []
-            var y = -(list.reduce(CGFloat(0)) { $0 + h($1) + o.vgap * 2 } - o.vgap * 2) / 2
-            for t in list { place(t, 1, y, dir); y += h(t) + o.vgap * 2 }
+            var total: CGFloat = 0
+            for t in list { total += h(t) + o.vgap * 2 }
+            total -= o.vgap * 2
+            var y: CGFloat = -total / 2
+            for t in list {
+                place(t, 1, y, dir)
+                y += h(t) + o.vgap * 2
+            }
         }
         r.pos[hub] = MapPos(x: 0, y: 0, w: o.hubW, h: o.height(hub), depth: 0, dir: 0, below: 0)
         var b = CGRect(x: 0, y: 0, width: 0, height: 0)

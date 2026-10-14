@@ -183,6 +183,7 @@ extension Session {
     public struct Intake {
         public var stage: IntakeStage
         public var ids: [NodeID]
+        public init(stage: IntakeStage, ids: [NodeID]) { self.stage = stage; self.ids = ids }
     }
 
     public func firstStage() -> IntakeStage { names.b.isEmpty ? .name : .time }
