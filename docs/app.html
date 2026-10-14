@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Machine Prompts Man</title>
+<meta name="description" content="Machine Prompts Man: timed rounds of focused work where every phase change is a handshake. Runs in your browser; your plan stays on your device.">
+<meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F7F7F8" media="(prefers-color-scheme: light)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235B8DEF' stroke-width='3'/%3E%3Cpath d='M16 8v8l5 3' fill='none' stroke='%235B8DEF' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="app.css">
+<script>if (window.self !== window.top) document.documentElement.classList.add("embedded");</script>
+</head>
+<body>
+<main class="app-shell">
+  <div class="app" id="sim" tabindex="0" aria-label="Machine Prompts Man. Press Space for the one thing the screen asks for.">
+    <header class="app-head">
+      <a class="wordmark" href="index.html" title="About Machine Prompts Man">
+        <svg width="18" height="18" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="3"/><path d="M16 8v8l5 3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+        <span>Machine Prompts Man</span>
+      </a>
+      <div class="seg2 roletabs" id="roletabs" role="tablist" aria-label="Roles">
+        <button type="button" role="tab" data-role="b" title="B: work"><span class="rk">B</span><span class="rn">Work</span></button>
+        <button type="button" role="tab" data-role="a" title="A: requests"><span class="rk">A</span><span class="rn">Requests</span><span class="bdg" id="abadge" hidden aria-label="A request is waiting"></span></button>
+        <button type="button" role="tab" data-role="admin"><span class="rn">Admin</span></button>
+      </div>
+      <button class="headbtn" type="button" id="opensettings" aria-haspopup="dialog" aria-label="Settings" title="Settings (⌘,)">
+        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Settings</span>
+      </button>
+    </header>
+
+    <div class="wbody solo" id="wbody">
+      <!-- B: one screen at a time; the board is the only thing that opens beside it -->
+      <div class="bscreen" id="bscreen">
+        <div class="bstrip" id="bstrip" hidden><span class="bs-h" id="bs-h"></span><span class="bs-l" id="bs-l"></span><span class="bs-b" id="bs-b"></span></div>
+        <div class="bview intake" id="b-intake">
+          <div class="said" id="in-said"></div>
+          <form id="in-form" autocomplete="off">
+            <label class="ask" for="in-text" id="in-q">What would you like to do now?</label>
+            <div class="inrow"><input id="in-text" type="text" maxlength="60" spellcheck="false" placeholder="One step, in a few words" autocomplete="off"><button class="ret" type="submit" aria-label="Add this step" title="Return"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 3v5H4.5M7 5.5 4.5 8 7 10.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+          </form>
+          <p class="intake-hint" id="in-hint">Press Return after each step. The first becomes Doing, the second Next.</p>
+          <button class="linkish big" type="button" id="in-skip" hidden>or skip this</button>
+          <button class="linkish big" type="button" id="in-cont" hidden>or continue where you left off</button>
+        </div>
+        <div class="bview ready" id="b-ready" hidden>
+          <ul class="pairlist" id="rd-list"></ul>
+          <p class="ask">Ready to start?</p>
+          <div class="rdrow"><button class="btn primary big" type="button" id="rd-ok">OK</button><span>or <button class="linkish" type="button" id="rd-more">add more</button></span></div>
+        </div>
+        <div class="bview round" id="b-round" hidden>
+          <div class="rhead"><span class="rh-t" id="r-title">Round 1</span><span class="mono rh-m" id="r-seated"></span></div>
+          <div class="ring-box sim-ring">
+            <svg viewBox="0 0 220 220" aria-hidden="true">
+              <circle class="ring-track" cx="110" cy="110" r="104" fill="none" stroke-width="6"/>
+              <circle class="ring-arc" id="r-arc" cx="110" cy="110" r="104" fill="none" stroke="var(--doing)" stroke-width="6"
+                      stroke-dasharray="653.45" stroke-dashoffset="0" transform="rotate(-90 110 110)"/>
+            </svg>
+            <div class="ring-center"><span class="digits" id="r-digits">10:00</span><span class="counts">left</span></div>
+          </div>
+          <div class="slots">
+            <div class="slot"><span class="dot" style="background:var(--doing)"></span><span class="k">Doing</span><span class="v" id="r-doing"></span></div>
+            <div class="slot"><span class="dot" style="background:var(--next)"></span><span class="k">Next</span><span class="v" id="r-next"></span></div>
+          </div>
+          <div class="ract"><button class="btn primary big" type="button" id="r-phase">Next phase</button><button class="linkish" type="button" id="r-board">Open the board ›</button></div>
+        </div>
+        <div class="bview planhead" id="b-plan" hidden>
+          <div class="lt"><span class="ph-t" id="pl-title">Plan round 2</span><span class="ph-d" id="pl-digits"></span></div>
+          <button class="btn primary" type="button" id="pl-start">Start round 2</button>
+        </div>
+      </div>
+
+      <div class="board" id="board" hidden>
+        <div class="bhead">
+          <div class="lt"><span class="label">Strategy board</span><div class="seg2" id="bseg" role="tablist" aria-label="Board views"><button type="button" role="tab" data-v="map">Map</button><button type="button" role="tab" data-v="table">Table</button></div></div>
+          <button class="linkish" type="button" id="bclose">Close the board ‹</button>
+        </div>
+        <div class="lockline" id="lockline" hidden></div>
+        <div class="btop" id="btop"></div>
+        <div class="bbody">
+          <div class="bpanel mapwrap" id="bp-map">
+            <div class="mcanvas" id="mcanvas">
+              <div class="maim" id="maim" hidden><span id="maimtext"></span><button type="button" id="maimcancel">Esc · cancel</button></div>
+            </div>
+            <aside class="minsp" id="minsp" aria-label="Selected step"></aside>
+          </div>
+          <div class="bpanel" id="bp-table" hidden>
+            <div class="gridpanel" id="gridpanel">
+              <div class="rpick" id="gridpick"></div>
+              <div class="scroll"><table class="sgrid"><thead><tr><th>Step</th><th>Status</th><th>This round</th><th>Waits for</th><th>Updated</th></tr></thead><tbody id="gridbody"></tbody></table></div>
+            </div>
+          </div>
+        </div>
+        <form class="quicklog" id="quicklog" autocomplete="off"><input id="qlin" type="text" maxlength="60" placeholder="Add a step under the selection" aria-label="Add a step under the selection"><span class="fine" id="qlunder"></span></form>
+        <div class="rfoot"><span id="g-hint"></span><span id="g-nav">Drag to pan · ⌘/Ctrl + scroll to zoom · F fits the map</span></div>
+      </div>
+
+      <!-- A: answers requests. Essentials only: the clock in a box at the top, who answers at the
+           top left, and every request as a box in a grid at the centre. The table, the grid and
+           the log open on request from the buttons at the top right. -->
+      <div class="ascreen" id="ascreen" hidden>
+        <div class="abar">
+          <div class="awho"><span class="fine">Who answers</span><div class="seg2" id="aswho" role="group" aria-label="Who answers for A"><button type="button" data-auto="1" title="The policy table answers every request at once">Policy</button><button type="button" data-auto="0" title="Requests wait here for you">You</button></div><input class="aname" id="aname" type="text" maxlength="30" placeholder="Your name (optional)" aria-label="A's name" autocomplete="off" spellcheck="false"></div>
+          <div class="aclock" id="aclock" role="timer" aria-live="off">
+            <span class="label" id="a-state"></span>
+            <span class="dg" id="a-digits"></span>
+            <span class="meta" id="a-meta"></span>
+            <span class="rem" id="a-rem" hidden></span>
+          </div>
+          <div class="amore"><div class="seg2" id="aseg" role="group" aria-label="More for A"><button type="button" data-t="table" aria-pressed="false" title="Every request this session">Table</button><button type="button" data-t="grid" aria-pressed="false" title="B's plan, read only">Grid</button><button type="button" data-t="log" aria-pressed="false" title="Every event">Log</button></div></div>
+        </div>
+        <div class="aboxes" id="aboxes" aria-live="polite"></div>
+        <div class="anotes" id="anotes" role="log" aria-live="polite" aria-label="What B is doing"></div>
+        <div class="adrawer" id="adrawer" hidden>
+          <div class="adhead"><span class="fine" id="a-hint"></span><button class="linkish" type="button" id="adclose">Hide ‹</button></div>
+          <div class="apanel" id="ap-table">
+            <div class="rqhead"><span>Every request this session, newest first</span><span id="rqsum"></span></div>
+            <div class="scroll"><table class="rq"><thead><tr><th>#</th><th>Round</th><th>Asked</th><th>By</th><th>Policy</th><th>Verdict</th><th>A took</th><th>B took</th><th>Outcome</th></tr></thead><tbody id="rqbody"></tbody></table></div>
+          </div>
+          <div class="apanel" id="ap-grid" hidden></div>
+          <div class="apanel" id="ap-log" hidden>
+            <div class="rpanel" id="p-logs">
+              <div class="ltool">
+                <select id="logpart" aria-label="Part"></select>
+                <button class="toggle" type="button" id="logprob" aria-pressed="false">Problems only</button>
+                <button class="toggle" type="button" id="logseen">Mark seen</button>
+                <span class="count" id="logcount"></span>
+              </div>
+              <div class="scroll"><ol class="loglist" id="loglist"></ol></div>
+              <div class="ldetail" id="ldetail"><h4>Select an event</h4><p class="meta">Select an event to see its detail. The newest are at the top.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin: watches -->
+      <div class="adscreen" id="adscreen" hidden>
+        <div class="atabs"><div class="seg2" id="adseg" role="tablist" aria-label="Admin's views"><button type="button" role="tab" data-t="monitor">Monitor</button><button type="button" role="tab" data-t="log">Event log</button></div><span class="fine" id="mon-last"></span></div>
+        <div class="apanel" id="adp-monitor">
+          <div class="mon-wrap">
+            <div class="mapwrap"><div class="mcanvas" id="moncanvas"></div><aside class="minsp" id="monsp" aria-label="Selected part"></aside></div>
+            <div class="rfoot"><span>Every hand-off travels its line. Click a part for its latest; double-click to open its events in the log.</span><span>Requests go B → Session engine → Policy or A</span></div>
+          </div>
+        </div>
+        <div class="apanel" id="adp-log" hidden></div>
+      </div>
+
+      <div class="toast" id="toast" role="status" hidden></div>
+    </div>
+
+    <div class="bfoot" id="bfoot">
+      <label class="seat" for="seatmin">Already seated <input id="seatmin" type="number" min="0" max="240" step="5" value="0" inputmode="numeric"> min</label>
+      <span class="fine" id="seatnote">Counts toward the sitting limit when the session opens.</span>
+      <span class="voice"><span class="fine">Voice</span><div class="seg2" id="bvoice" role="group" aria-label="The voice of the announcements"><button type="button" data-v="rich" title="A different sentence now and then, and often a second on what the numbers mean for you">Rich</button><button type="button" data-v="varied" title="A different sentence now and then, one at a time">Varied</button><button type="button" data-v="fixed" title="The spec's wording, word for word">Fixed</button></div></span>
+      <span class="bfoot-r">
+        <button class="linkish" type="button" id="bend">End session</button>
+      </span>
+    </div>
+    <div class="sheet-wrap" id="sheetwrap" hidden></div>
+    <div class="band" id="band" hidden><span class="label" style="color:inherit">Break</span><span>Stand up and move</span><span class="mono" id="banddigits">3:00</span><button class="bandask" type="button" id="bandask">Ask to move on</button></div>
+    <div class="card-overlay cover" id="cover" hidden>
+      <div class="cv" id="cv" role="alertdialog" aria-modal="true" aria-labelledby="cv-h">
+        <div class="cv-top"><h4 id="cv-h"></h4><span class="cv-d" id="cv-d"></span></div>
+        <p class="cv-l" id="cv-l"></p>
+        <p class="cv-q" id="cv-q"></p>
+        <div class="cv-b" id="cv-b"></div>
+        <span class="cv-meta" id="cv-meta" hidden></span>
+        <button class="linkish cv-ask" type="button" id="cv-ask" hidden>Ask to move on</button>
+      </div>
+    </div>
+  </div>
+  <p class="sr" id="s-announce" aria-live="polite"></p>
+  <p class="app-foot"><span>Runs in your browser. Your plan and settings stay on this device. <kbd>Space</kbd> does the one thing each screen asks for.</span><a href="index.html">About Machine Prompts Man</a></p>
+</main>
+<script src="js/announce.js"></script>
+<!-- The app, in load order: each file declares into one shared scope; main.js starts it. -->
+<script src="js/util.js"></script>
+<script src="js/mapview.js"></script>
+<script src="js/state.js"></script>
+<script src="js/store.js"></script>
+<script src="js/pairs.js"></script>
+<script src="js/voice.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/requests.js"></script>
+<script src="js/model.js"></script>
+<script src="js/monitor.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/screen-b.js"></script>
+<script src="js/board.js"></script>
+<script src="js/grid.js"></script>
+<script src="js/log.js"></script>
+<script src="js/screen-a.js"></script>
+<script src="js/chrome.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/render.js"></script>
+<script src="js/input.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
