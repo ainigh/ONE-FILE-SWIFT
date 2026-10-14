@@ -30,6 +30,8 @@ final class AppModel: ObservableObject {
 
     let session: Session
     var updater: Updater?
+    /// The updater swapped the bundle and is quitting to relaunch: let it.
+    var quittingForUpdate = false
 
     /// Bumped every frame: views that show the clocks read it.
     @Published private(set) var frame = 0
@@ -372,6 +374,10 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: The session transcript, saved where the user chose
+
+    func chooseTranscriptFolder() {
+        if let url = OutputFolder.choose() { showToast("Transcripts go to \(url.lastPathComponent).", error: false) }
+    }
 
     func saveTranscript() {
         let s = session

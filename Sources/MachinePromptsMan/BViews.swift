@@ -237,48 +237,60 @@ struct PlanHeadView: View {
     }
 }
 
-/// Dictate a line: the microphone, written down on this Mac (Parakeet), into the field.
+/// Dictate a line: the microphone, written down on this Mac (Parakeet), into the field. One
+/// listener for the app; the button shows its state, so a rebuilt screen can't lose track of it.
 struct DictateButton: View {
     var onText: (String) -> Void
-    @State private var listening = false
-    @State private var stopWork: DispatchWorkItem?
-    @State private var poll: Timer?
+    @EnvironmentObject var app: AppModel
     @ObservedObject private var listener = DictateButton.shared
+    /// Stopped, and the last words are still being written down: deliver them when they land.
+    @State private var awaiting = false
 
     private static let shared = Listener()
 
     var body: some View {
+        let active = listener.on || listener.finishing
         Button {
             toggle()
         } label: {
-            Image(systemName: listening ? "mic.fill" : "mic").font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(listening ? Color.stop : Color.ink)
+            Image(systemName: active ? "mic.fill" : "mic").font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(active ? Color.stop : Color.ink)
         }
         .buttonStyle(MPMButtonStyle(kind: .plain))
-        .help(listening ? "Listening… click to stop" : "Dictate (the microphone; written down on this Mac)")
+        .help(listener.finishing ? "Writing it down… click again to give up"
+              : listener.on ? "Listening… click to stop"
+              : Neural.status(Neural.shared.ears, what: "the listening") ?? "Dictate (the microphone; written down on this Mac)")
+        .onChange(of: listener.finishing) { _, finishing in if !finishing && awaiting { deliver() } }
+        .onChange(of: listener.problem) { _, p in
+            guard let p else { return }
+            app.showToast(p, error: true)
+            if awaiting { awaiting = false; DictateButton.shared.clear() }
+        }
     }
 
     private func toggle() {
         let l = DictateButton.shared
-        if listening { finish(); return }
+        if l.on {
+            awaiting = true
+            l.stop()
+            if !l.finishing { deliver() }
+            return
+        }
+        if l.finishing {                              // a second click while it's still writing: give up
+            awaiting = false
+            l.clear()
+            return
+        }
         l.pauseToEnd = nil
         l.clear()
         l.start()
-        listening = true
     }
 
-    private func finish() {
+    private func deliver() {
+        awaiting = false
         let l = DictateButton.shared
-        l.stop()
-        poll?.invalidate()
-        poll = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { t in
-            if l.on { l.stop(); return }
-            if l.finishing { return }
-            t.invalidate()
-            let heard = l.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            l.clear()
-            listening = false
-            if !heard.isEmpty { onText(heard) }
-        }
+        let heard = l.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        l.clear()
+        if !heard.isEmpty { onText(heard) }
     }
 }

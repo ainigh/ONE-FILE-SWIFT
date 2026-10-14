@@ -20,7 +20,7 @@ public enum SpokenText {
             lines.append(cleanLine(line))
         }
         return lines.joined(separator: "\n")
-            .replacingOccurrences(of: "\n\n\n", with: "\n\n")
+            .replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -86,10 +86,10 @@ public enum SpokenText {
 
     private static func endsWithAbbreviation(_ s: String) -> Bool {
         guard let last = s.split(whereSeparator: \.isWhitespace).last?.lowercased() else { return false }
-        let word = last.trimmingCharacters(in: CharacterSet(charactersIn: "(\"'"))
+        let word = last.trimmingCharacters(in: CharacterSet(charactersIn: "(\"'”’)]"))
         if abbreviations.contains(word) { return true }
-        // A single capital and a dot ("J. Smith") is an initial.
-        return word.count == 2 && word.first!.isLetter
+        // A single capital and a dot ("J. Smith") is an initial; "Plan a." is a sentence.
+        return word.count == 2 && word.first!.isUppercase
     }
 
     private static func push(_ out: inout [String], _ s: String) {

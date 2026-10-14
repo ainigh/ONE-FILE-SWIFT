@@ -73,7 +73,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         // Quitting mid-session would leave the clocks nowhere: end the session first (End Session
         // in the menu, or End session at the foot of B's screen). Say so instead of refusing in silence.
-        if model.session.state == nil { return .terminateNow }
+        if model.session.state == nil || model.quittingForUpdate { return .terminateNow }
         model.role = .b
         windows.showMain()
         model.showToast("A session is running. End it first, then quit.", error: true)
@@ -133,6 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         _ = add("Open Window", #selector(openWindow), key: "")
         _ = add("End Session", #selector(endSession), enabled: s.canEnd())
         _ = add("Session Transcript…", #selector(saveTranscript), enabled: !s.events.isEmpty)
+        _ = add("Transcript Folder…", #selector(chooseFolder))
         _ = add("System Monitor", #selector(openMonitor))
         menu.addItem(.separator())
         _ = add("Test Mode (60×)", #selector(toggleTest), state: model.testMode)
@@ -183,6 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func openWindow() { windows.showMain() }
     @objc private func endSession() { model.askToEnd() }
     @objc private func saveTranscript() { model.saveTranscript() }
+    @objc private func chooseFolder() { model.chooseTranscriptFolder() }
     @objc private func openMonitor() { model.role = .admin; model.adTab = .monitor; windows.showMain() }
     @objc private func toggleTest() { model.setTestMode(!model.testMode) }
     @objc private func toggleMute() { model.setMuted(!model.muted) }

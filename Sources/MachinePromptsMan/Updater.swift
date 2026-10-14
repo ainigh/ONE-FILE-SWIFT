@@ -136,7 +136,7 @@ final class Updater {
 
     static func findUpdate() throws -> Plan {
         let head = try fetchHead()
-        let release = try? fetchLatestRelease()
+        let release = try? fetchRelease(for: head)
         return decide(head: head, installedCommit: currentCommit, latestRelease: release)
     }
 
@@ -154,6 +154,16 @@ final class Updater {
     }
 
     static func fetchHead() throws -> Commit {
+        do {
+            return try fetchHead(of: branch)
+        } catch let p as Problem where branch != "main" && (p.errorDescription ?? "").hasPrefix("GitHub can't find") {
+            // The branch this copy was installed from is gone (merged and deleted): follow main.
+            log("branch \(branch) is gone; following main")
+            return try fetchHead(of: "main")
+        }
+    }
+
+    static func fetchHead(of branch: String) throws -> Commit {
         let json = try api("repos/\(repo)/commits/\(branch)")
         guard let sha = json["sha"] as? String,
               let details = json["commit"] as? [String: Any],
@@ -163,9 +173,17 @@ final class Updater {
         return Commit(sha: sha, title: message.components(separatedBy: "\n").first ?? message)
     }
 
-    static func fetchLatestRelease() throws -> Release {
-        let json = try api("repos/\(repo)/releases/latest")
-        guard let tag = json["tag_name"] as? String else { throw Problem("no release") }
+    /// The release GitHub made from this commit, if any; else the newest one (which `decide`
+    /// then passes over, since its commit differs).
+    static func fetchRelease(for head: Commit) throws -> Release {
+        let list = try apiList("repos/\(repo)/releases?per_page=10")
+        let releases = list.compactMap(release)
+        guard let first = releases.first else { throw Problem("no release") }
+        return releases.first { $0.target == head.sha } ?? first
+    }
+
+    static func release(_ json: [String: Any]) -> Release? {
+        guard let tag = json["tag_name"] as? String else { return nil }
         let assets = json["assets"] as? [[String: Any]] ?? []
         let asset = assets.first { ($0["name"] as? String) == assetName }
         let url = (asset?["browser_download_url"] as? String).flatMap(URL.init(string:))
@@ -213,6 +231,14 @@ final class Updater {
         }
         _ = try? run("/usr/bin/xattr", ["-dr", "com.apple.quarantine", newApp.path])
 
+        // A build takes minutes: a session may have opened meanwhile. Never swap the bundle under a
+        // running session, and tell the app the quit that follows is ours.
+        var sessionRunning = false
+        DispatchQueue.main.sync {
+            sessionRunning = AppModel.shared.session.state != nil
+            if !sessionRunning { AppModel.shared.quittingForUpdate = true }
+        }
+        if sessionRunning { throw Problem("a session is running: end it, then update again") }
         step("Restarting…")
         _ = try fm.replaceItemAt(app, withItemAt: newApp)
         log("updated to \(commit.short)")
@@ -273,8 +299,19 @@ final class Updater {
 
     /// GET https://api.github.com/<path>, as JSON.
     static func api(_ path: String) throws -> [String: Any] {
+        guard let json = try apiJSON(path) as? [String: Any] else { throw Problem("GitHub's answer wasn't JSON") }
+        return json
+    }
+
+    static func apiList(_ path: String) throws -> [[String: Any]] {
+        guard let json = try apiJSON(path) as? [[String: Any]] else { throw Problem("GitHub's answer wasn't a list") }
+        return json
+    }
+
+    static func apiJSON(_ path: String) throws -> Any {
         guard let url = URL(string: "https://api.github.com/\(path)") else { throw Problem("bad path \(path)") }
         var request = URLRequest(url: url)
+        request.timeoutInterval = 15
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("MachinePromptsMan/\(currentVersion)", forHTTPHeaderField: "User-Agent")
         let (data, response) = try fetch(request)
@@ -282,10 +319,7 @@ final class Updater {
         if status == 404 { throw Problem("GitHub can't find \(path)") }
         if status == 403 || status == 429 { throw Problem("GitHub's hourly limit: try again later") }
         guard status == 200 else { throw Problem("GitHub answered \(status)") }
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw Problem("GitHub's answer wasn't JSON")
-        }
-        return json
+        return try JSONSerialization.jsonObject(with: data)
     }
 
     static func download(_ url: URL, to file: URL) throws {
