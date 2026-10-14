@@ -68,6 +68,8 @@ final class AppModel: ObservableObject {
         var id: Int
         var kind: String
         var at: String
+        /// When it was sent, wall-clock milliseconds (the screens stamp it in local time).
+        var atMs: Double
         var ok: Bool
         var why: String
     }
@@ -313,7 +315,7 @@ final class AppModel: ObservableObject {
 
     private func feedDone(_ m: FeedMessage, ok: Bool, why: String) {
         feedBusy = false
-        feedLog.append(FeedLogLine(id: m.seq, kind: m.kind, at: m.at, ok: ok, why: why))
+        feedLog.append(FeedLogLine(id: m.seq, kind: m.kind, at: m.at, atMs: Date().timeIntervalSince1970 * 1000, ok: ok, why: why))
         if feedLog.count > 12 { feedLog.removeFirst() }
         if ok {
             if feedFails > 0 { session.logEvent(.feed, nil, .ok, "feed delivering again", "after \(feedFails) failed") }

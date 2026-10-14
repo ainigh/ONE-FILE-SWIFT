@@ -140,12 +140,12 @@ struct Seg<T: Hashable>: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text(it.1)
-                        if badge == it.0 { Circle().fill(Color.next).frame(width: 6, height: 6) }
+                        if badge == it.0 { Circle().fill(Color.stop).frame(width: 7, height: 7).overlay(Circle().stroke(Color.surface, lineWidth: 2)) }
                     }
                     .font(.system(size: 12, weight: selection == it.0 ? .semibold : .regular))
                     .foregroundStyle(selection == it.0 ? Color.ink : Color.ink2)
                     .padding(.horizontal, 10).padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(selection == it.0 ? Color.surface2 : .clear))
+                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(selection == it.0 ? Color.ink.opacity(0.09) : .clear))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

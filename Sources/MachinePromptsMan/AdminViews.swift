@@ -106,8 +106,8 @@ struct PartCard: View {
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(working ? Color.doing : Color.surface))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(sel ? Color.ink : cnt > 0 ? Color.blocked : Color.line2, style: StrokeStyle(lineWidth: sel ? 2 : 1.2, dash: cnt > 0 && !sel ? [4, 3] : [])))
         .contentShape(Rectangle())
-        .onTapGesture { app.monitorSel = sel ? nil : part }
         .onTapGesture(count: 2) { app.logPart = part; app.adTab = .log; s.markSeen(part) }
+        .onTapGesture { app.monitorSel = sel ? nil : part }
         .help("\(part.title): \(part.what)")
     }
 
@@ -145,6 +145,13 @@ struct PartInspector: View {
                     let cnt = s.unseen[k] ?? 0
                     Text(k.title).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.ink)
                     Text(k.what).font(Theme.fine).foregroundStyle(Color.ink2)
+                    let last = mine.last { $0.outcome != .info }
+                    let working = (k == .model && s.state == .status && s.running() && s.turn?.done == false) || (k == .a && s.openReq?.verdict == nil && s.openReq != nil)
+                    HStack(spacing: 6) {
+                        Circle().fill(working ? Color.doing : cnt > 0 ? Color.blocked : last.map { Theme.color($0.outcome.tone) } ?? Color.ink3).frame(width: 9, height: 9)
+                        Text(k == .a && working ? "Has a request to answer" : working ? "Working, on a deadline" : cnt > 0 ? Format.n(cnt, "unseen problem", "unseen problems") : last.map { "\($0.outcome.word) last" } ?? "Quiet")
+                            .font(Theme.fine).foregroundStyle(Color.ink2)
+                    }
                     Label2("Hands off to")
                     FlowChips(parts: Self.neighbours(k)) { app.monitorSel = $0 }
                     Label2("Events")
@@ -235,7 +242,8 @@ struct LogView: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(app.logSel == e.id ? Color.surface2 : Color.clear)
+                            .background(app.logSel == e.id ? Color.ink.opacity(0.06) : Color.clear)
+                            .overlay(alignment: .leading) { if app.logSel == e.id { Rectangle().fill(Color.doing).frame(width: 2) } }
                             .contentShape(Rectangle())
                             .onTapGesture { app.logSel = e.id }
                         }
@@ -274,18 +282,15 @@ struct FeedView: View {
                 Text("Everything A's screen shows is also sent to this URL: each request as it arrives, every verdict and outcome, what \(s.bName) does, the clock at each phase change, each reminder, and the assistant's brief. One way only: the app sends and never reads a reply or takes a command.")
                     .font(Theme.body).foregroundStyle(Color.ink2)
                 HStack(spacing: 8) {
-                    TextField("https://example.com/a-feed", text: $url).textFieldStyle(.roundedBorder).frame(maxWidth: 420).onAppear { url = app.feedURL }
-                    Button("Save") {
-                        if !AppModel.feedUrlOk(url.trimmingCharacters(in: .whitespaces)) { app.showToast("A URL starting with http:// or https://", error: true); return }
-                        app.setFeed(url: url, on: true)
-                    }.buttonStyle(MPMButtonStyle(kind: .primary))
+                    TextField("https://example.com/a-feed", text: $url).textFieldStyle(.roundedBorder).frame(maxWidth: 420).onAppear { url = app.feedURL }.onSubmit(save)
+                    Button("Save", action: save).buttonStyle(MPMButtonStyle(kind: .primary))
                     Button("Turn off") { app.setFeed(url: url, on: false) }.buttonStyle(MPMButtonStyle(kind: .plain)).disabled(!app.feedOn)
                     Button("Send a test") { app.feedTest() }.buttonStyle(MPMButtonStyle(kind: .plain)).disabled(!app.feedOn)
                 }
                 Text(stateLine()).font(Theme.fine).foregroundStyle(Color.ink2)
                 ForEach(app.feedLog.reversed()) { x in
                     HStack(spacing: 8) {
-                        Text(x.at.suffix(13).prefix(8)).font(Theme.mono(10)).foregroundStyle(Color.ink3)
+                        Text(Format.stamp(x.atMs)).font(Theme.mono(10)).foregroundStyle(Color.ink3)
                         Text(x.kind).font(Theme.fine).foregroundStyle(Color.ink)
                         Text(x.ok ? "sent" : x.why).font(Theme.fine).foregroundStyle(x.ok ? Color.done : Color.stop)
                     }
@@ -297,10 +302,15 @@ struct FeedView: View {
         }
     }
 
+    private func save() {
+        if !AppModel.feedUrlOk(url.trimmingCharacters(in: .whitespaces)) { app.showToast("A URL starting with http:// or https://", error: true); return }
+        app.setFeed(url: url, on: true)
+    }
+
     private func stateLine() -> String {
         if app.feedURL.isEmpty { return "No URL yet. Nothing is sent." }
         if !app.feedOn { return "Off. Nothing is sent." }
         guard let last = app.feedLog.last else { return "On. Waiting for the first thing to send." }
-        return (last.ok ? "On. Last sent (\(last.kind))." : "On, but the last send failed: \(last.why).") + (app.feedFails > 1 ? " \(app.feedFails) failed in a row." : "")
+        return (last.ok ? "On. Last sent \(Format.stamp(last.atMs)) (\(last.kind))." : "On, but the last send failed: \(last.why).") + (app.feedFails > 1 ? " \(app.feedFails) failed in a row." : "")
     }
 }
