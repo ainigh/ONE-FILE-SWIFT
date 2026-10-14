@@ -97,10 +97,6 @@ final class AppModel: ObservableObject {
         wire()
     }
 
-    func start() {
-        session.onSavePlan = { Storage.savePlan($0) }
-    }
-
     private func wire() {
         session.onSavePlan = { Storage.savePlan($0) }
         session.onSaveSettings = { [weak self] in self?.saveSettings() }

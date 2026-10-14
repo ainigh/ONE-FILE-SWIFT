@@ -136,7 +136,8 @@ final class Windows {
         }
         if let b = band, let screen = NSScreen.main ?? NSScreen.screens.first {
             let v = screen.visibleFrame
-            b.setFrame(NSRect(x: v.minX, y: v.maxY - 44, width: v.width, height: 44), display: true)
+            let f = NSRect(x: v.minX, y: v.maxY - 44, width: v.width, height: 44)
+            if b.frame != f { b.setFrame(f, display: true) }
             if !b.isVisible { b.orderFrontRegardless() }
         }
     }

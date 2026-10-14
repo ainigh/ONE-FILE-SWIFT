@@ -54,7 +54,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         model.updater = updater
         updater.onChange = { [weak self] _ in self?.refreshStatus(force: true) }
         updater.start()
-        model.start()
         windows.model = model
         windows.showMain()
 
@@ -72,8 +71,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        // Quitting mid-session would leave the clocks nowhere: the menu asks to end it first.
-        model.session.state == nil ? .terminateNow : .terminateCancel
+        // Quitting mid-session would leave the clocks nowhere: end the session first (End Session
+        // in the menu, or End session at the foot of B's screen). Say so instead of refusing in silence.
+        if model.session.state == nil { return .terminateNow }
+        model.role = .b
+        windows.showMain()
+        model.showToast("A session is running. End it first, then quit.", error: true)
+        return .terminateCancel
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
