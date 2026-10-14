@@ -1,4 +1,5 @@
 import Cocoa
+import CountdownCore
 
 // MARK: - Configuration
 
@@ -496,6 +497,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastShown = -1
     private let duration = Config.duration
     private let updater = Updater()
+    private let speaker = Speaker()
+    private let listener = Listener()
+    private var listenStop: DispatchWorkItem?
+    private var listenPoll: Timer?
+    private static let listenSeconds = 5.0
 
     private var isRunning: Bool { deadline != nil }
 
@@ -585,6 +591,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         start.isEnabled = !isRunning
 
         menu.addItem(.separator())
+        addVoiceItems(to: menu)
+
+        menu.addItem(.separator())
         addUpdateItems(to: menu)
 
         menu.addItem(.separator())
@@ -598,19 +607,126 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = nil                      // restore click-to-start behaviour
     }
 
+    @discardableResult
+    private func add(_ title: String, _ action: Selector?, to menu: NSMenu, enabled: Bool = true) -> NSMenuItem {
+        let i = menu.addItem(withTitle: title, action: action, keyEquivalent: "")
+        i.target = self
+        i.isEnabled = enabled
+        return i
+    }
+
+    // MARK: Voice and the output folder
+    //
+    // The ground for the app in docs/: it speaks (Kokoro, or the Mac's voice until Kokoro is
+    // downloaded), listens (Parakeet) and writes files where the user chose. Each countdown says
+    // the time and saves it, so the folder permission is exercised; Listen exercises the
+    // microphone one.
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.dateStyle = .none
+        return f
+    }()
+
+    private func addVoiceItems(to menu: NSMenu) {
+        let current = OutputFolder.current()
+        let choose = add(current.map { "Output Folder: \($0.lastPathComponent)…" } ?? "Choose Output Folder…",
+                         #selector(chooseFolder), to: menu, enabled: !isRunning)
+        choose.toolTip = current?.path ?? "Where each countdown's spoken time (and what you say to Listen) is saved."
+        add("Say and Save the Time", #selector(sayTime), to: menu, enabled: !isRunning)
+        let listening = listenStop != nil
+        add(listening ? "Listening…" : "Listen for \(Int(Self.listenSeconds)) Seconds",
+            #selector(listenBriefly), to: menu, enabled: !isRunning && !listening)
+        for status in [Neural.status(Neural.shared.voices, what: "the voices"),
+                       Neural.status(Neural.shared.ears, what: "speech recognition")] {
+            if let status = status { add(status, nil, to: menu, enabled: false) }
+        }
+    }
+
+    @objc private func chooseFolder() {
+        OutputFolder.choose()
+    }
+
+    @objc private func sayTime() {
+        announceTime()
+    }
+
+    /// Says the time and writes it to a new file in the chosen folder.
+    private func announceTime() {
+        let now = Date()
+        let line = "It is \(Self.timeFormatter.string(from: now))."
+        speaker.say(line)
+        save(line, at: now, kind: "countdown")
+    }
+
+    private func save(_ text: String, at date: Date, kind: String) {
+        do {
+            let url = try OutputFolder.write(text + "\n", kind: kind, at: date)
+            Updater.log("wrote \(url.path)")
+        } catch {
+            Updater.log("couldn't write the \(kind) file: \(error.localizedDescription)")
+            statusItem.button?.toolTip = "Couldn't save: \(error.localizedDescription)"
+        }
+    }
+
+    /// Listens for a few seconds (macOS asks for the microphone the first time), then says back
+    /// what it heard and saves it.
+    @objc private func listenBriefly() {
+        guard !isRunning, !listener.on, listenStop == nil else { return }
+        listener.pauseToEnd = nil
+        listener.clear()
+        listener.start()
+        statusItem.button?.appearsDisabled = true
+        let stop = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.listener.stop()
+            self.listenPoll = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] t in
+                guard let self = self else { return }
+                // The microphone may open only after the time was up (macOS asked first): close it.
+                if self.listener.on {
+                    self.listener.stop()
+                    return
+                }
+                guard !self.listener.finishing else { return }   // the last words are still being written down
+                t.invalidate()
+                self.listenPoll = nil
+                self.listenStop = nil
+                self.statusItem.button?.appearsDisabled = false
+                self.heard()
+            }
+        }
+        listenStop = stop
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.listenSeconds, execute: stop)
+    }
+
+    private func heard() {
+        let heard = listener.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let problem = listener.problem
+        listener.clear()
+        if let problem = problem {
+            Updater.log("listening: \(problem)")
+            statusItem.button?.toolTip = problem
+            speaker.say("I couldn't listen.")
+            return
+        }
+        guard !heard.isEmpty else {
+            speaker.say("I didn't hear anything.")
+            return
+        }
+        speaker.say("You said: \(heard)")
+        save("You said: \(heard)", at: Date(), kind: "heard")
+    }
+
     // MARK: Updates
 
     private func addUpdateItems(to menu: NSMenu) {
         let version = menu.addItem(withTitle: Updater.versionLine, action: nil, keyEquivalent: "")
         version.isEnabled = false
         guard Updater.isInstalledApp else { return }
-
         @discardableResult
         func item(_ title: String, _ action: Selector?, enabled: Bool = true) -> NSMenuItem {
-            let i = menu.addItem(withTitle: title, action: action, keyEquivalent: "")
-            i.target = self
-            i.isEnabled = enabled
-            return i
+            add(title, action, to: menu, enabled: enabled)
         }
 
         switch updater.state {
@@ -655,6 +771,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func startCountdown() {
         guard !isRunning else { return }           // ignore clicks mid-countdown
+        guard listenStop == nil else { return }    // not while Listen has the microphone
+
+        // The first time, ask where to save, before the overlay covers the screen.
+        if OutputFolder.current() == nil, !OutputFolder.askedOnce { OutputFolder.choose() }
 
         previousApp = NSWorkspace.shared.frontmostApplication
         deadline = Date().addingTimeInterval(TimeInterval(duration))
@@ -665,6 +785,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildOverlays()
         updateLabels()
         regainFocus()
+        announceTime()
 
         // Swallow every key event delivered to this process, regardless of
         // which window is key, so Cmd-Q etc. never reach the responder chain.
