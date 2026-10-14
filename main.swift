@@ -3,8 +3,10 @@ import Cocoa
 // MARK: - Configuration
 
 /// Resolves the countdown length. Precedence: `-duration N` launch argument
-/// (read via UserDefaults' argument domain), then `COUNTDOWN_SECONDS` env var,
-/// then the built-in default. The value is clamped to a sane range.
+/// (read via UserDefaults' argument domain, so it can also be persisted with
+/// `defaults write <bundle id> duration -int 10`), then `COUNTDOWN_SECONDS`
+/// env var, then the built-in default. Out-of-range values fall back to the
+/// default so a typo can never lock the screen for hours.
 enum Config {
     static let defaultDuration = 5
     static let minDuration = 1
@@ -19,8 +21,19 @@ enum Config {
         if UserDefaults.standard.object(forKey: "duration") != nil {
             value = UserDefaults.standard.integer(forKey: "duration")
         }
-        return min(max(value, minDuration), maxDuration)
+        return (minDuration...maxDuration).contains(value) ? value : defaultDuration
     }
+
+    static let usage = """
+    CountdownOverlay — menubar countdown that covers every screen.
+
+    usage: CountdownOverlay [-duration SECONDS]
+
+      -duration N   countdown length, \(minDuration)...\(maxDuration) (default \(defaultDuration))
+      -h, --help    show this help
+
+    COUNTDOWN_SECONDS=N in the environment is used when -duration is absent.
+    """
 }
 
 // MARK: - Overlay window (one per screen)
@@ -29,11 +42,13 @@ final class OverlayWindow: NSWindow {
     private let label = NSTextField(labelWithString: "")
 
     init(screen: NSScreen) {
+        // Use the global-coordinate initializer: the `screen:` variant interprets
+        // contentRect relative to that screen, which misplaces secondary displays.
         super.init(contentRect: screen.frame,
                    styleMask: [.borderless],
                    backing: .buffered,
-                   defer: false,
-                   screen: screen)
+                   defer: false)
+        setFrame(screen.frame, display: false)
 
         level = .screenSaver                       // above everything, incl. full-screen apps
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
@@ -99,6 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var timer: Timer?
     private var deadline: Date?
     private var keyMonitor: Any?
+    private var rebuildWork: DispatchWorkItem?
     private var previousApp: NSRunningApplication?
     private var lastShown = -1
     private let duration = Config.duration
@@ -117,6 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             if let image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Countdown") {
+                image.isTemplate = true
                 button.image = image
             } else {
                 button.title = "⏱"                 // fallback if SF Symbols are unavailable
@@ -200,6 +217,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         previousApp = NSWorkspace.shared.frontmostApplication
         deadline = Date().addingTimeInterval(TimeInterval(duration))
         lastShown = -1
+        statusItem.button?.appearsDisabled = true
+        NSCursor.hide()
 
         buildOverlays()
         updateLabels()
@@ -217,7 +236,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         timer = t
     }
 
-    @objc private func workspaceDidWake(_ note: Notification) { tick() }
+    @objc private func workspaceDidWake(_ note: Notification) {
+        tick()                                     // finish at once if the deadline passed
+        if isRunning { regainFocus() }
+    }
     @objc private func appDidResignActive(_ note: Notification) { regainFocus() }
 
     private func tick() {
@@ -244,6 +266,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         timer?.invalidate()
         timer = nil
         deadline = nil
+        rebuildWork?.cancel()
+        rebuildWork = nil
+        NSCursor.unhide()                          // never leave the cursor hidden
+        statusItem?.button?.appearsDisabled = false
         if let monitor = keyMonitor {
             NSEvent.removeMonitor(monitor)
             keyMonitor = nil
@@ -284,17 +310,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // Rebuild if a display is plugged/unplugged or resized mid-countdown.
+    // Rebuild if a display is plugged/unplugged or resized mid-countdown. These
+    // notifications arrive in bursts, so coalesce them.
     @objc private func screensChanged() {
         guard isRunning else { return }
-        lastShown = -1
-        buildOverlays()
-        updateLabels()
-        regainFocus()
+        rebuildWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self = self, self.isRunning else { return }
+            self.lastShown = -1
+            self.buildOverlays()
+            self.updateLabels()
+            self.regainFocus()
+        }
+        rebuildWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
     }
 }
 
 // MARK: - Entry point
+
+let args = CommandLine.arguments.dropFirst()
+if args.contains("-h") || args.contains("--help") {
+    print(Config.usage)
+    exit(0)
+}
 
 let app = NSApplication.shared
 let delegate = AppDelegate()

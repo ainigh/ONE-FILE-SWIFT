@@ -18,7 +18,8 @@ Requires Xcode command line tools (`xcode-select --install`), macOS 11+.
 - **Left-click** the menubar icon → start countdown.
 - **Right-click** → menu with Start / Quit (Quit is disabled during a countdown).
 - The length defaults to 5 seconds. Override it per launch with an argument
-  or an environment variable (argument wins; values are clamped to 1–3600):
+  or an environment variable (argument wins; values outside 1–3600 fall back
+  to the default). `-h` / `--help` prints usage.
 
   ```sh
   ./CountdownOverlay -duration 10
@@ -32,7 +33,10 @@ Requires Xcode command line tools (`xcode-select --install`), macOS 11+.
 - All key events to the process are swallowed by a local event monitor, and
   the app re-activates itself if it loses focus, so Cmd-Q / Esc can't slip
   through via another window.
-- Overlays are rebuilt when displays are added, removed or resized.
+- Overlays are rebuilt (coalesced, after a short delay) when displays are
+  added, removed or resized, and placed in global coordinates so secondary
+  displays are covered correctly.
+- The cursor is hidden and the menubar icon dims while the countdown runs.
 - The digits scale with the smallest screen dimension.
 - Focus returns to the app that was frontmost before the countdown started.
 
