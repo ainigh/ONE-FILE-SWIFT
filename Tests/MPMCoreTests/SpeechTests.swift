@@ -1,5 +1,5 @@
 import XCTest
-@testable import CountdownCore
+@testable import MPMCore
 
 final class SpeechTests: XCTestCase {
     func testCleanDropsMarkdownAndCode() {

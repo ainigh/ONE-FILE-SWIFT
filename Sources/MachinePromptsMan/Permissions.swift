@@ -35,7 +35,7 @@ enum OutputFolder {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
-        panel.message = "Choose where CountdownOverlay saves what it says and hears."
+        panel.message = "Choose where Machine Prompts Man saves what it says and hears."
         panel.prompt = "Use This Folder"
         if let url = current() { panel.directoryURL = url }
         NSApp.activate(ignoringOtherApps: true)

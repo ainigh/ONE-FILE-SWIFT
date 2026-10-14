@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>CountdownOverlay</string>
+	<string>MachinePromptsMan</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.ainigh.CountdownOverlay</string>
+	<string>com.ainigh.MachinePromptsMan</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>CountdownOverlay</string>
+	<string>Machine Prompts Man</string>
 	<key>CFBundleDisplayName</key>
-	<string>CountdownOverlay</string>
+	<string>Machine Prompts Man</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -25,7 +25,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.utilities</string>
+	<string>public.app-category.productivity</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSSupportsAutomaticTermination</key>
@@ -33,12 +33,12 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>To hear you when you choose Listen. What you say is written down on this Mac and never leaves it.</string>
+	<string>To hear you when you dictate a step. What you say is written down on this Mac and never leaves it.</string>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>To save what it says and hears in the folder you chose.</string>
+	<string>To save the session transcript in the folder you chose.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>To save what it says and hears in the folder you chose.</string>
+	<string>To save the session transcript in the folder you chose.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>To save what it says and hears in the folder you chose.</string>
+	<string>To save the session transcript in the folder you chose.</string>
 </dict>
 </plist>

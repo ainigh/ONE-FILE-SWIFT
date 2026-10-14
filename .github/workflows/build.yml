@@ -2,7 +2,7 @@ name: build
 
 # Every push: test the core on Linux, then test and build the app on macOS and keep it as a
 # workflow artifact. A push to main also publishes the app as a GitHub release
-# (v1.0.<run number>, CountdownOverlay.zip), which is what install.sh and the menu's
+# (v1.0.<run number>, MachinePromptsMan.zip), which is what install.sh and the menu's
 # "Check for Updates…" download.
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 jobs:
-  # The speech logic (CountdownCore), on Linux: cheap and quick.
+  # The engine (MPMCore), on Linux: cheap and quick.
   core-linux:
     runs-on: ubuntu-latest
     steps:
@@ -41,13 +41,13 @@ jobs:
           UNIVERSAL=1 scripts/make-app.sh
       - name: Launches
         run: |
-          build/CountdownOverlay.app/Contents/MacOS/CountdownOverlay --help
-          lipo -info build/CountdownOverlay.app/Contents/MacOS/CountdownOverlay
-          /usr/libexec/PlistBuddy -c 'Print CountdownCommit' build/CountdownOverlay.app/Contents/Info.plist
+          build/MachinePromptsMan.app/Contents/MacOS/MachinePromptsMan --help
+          lipo -info build/MachinePromptsMan.app/Contents/MacOS/MachinePromptsMan
+          /usr/libexec/PlistBuddy -c 'Print MPMCommit' build/MachinePromptsMan.app/Contents/Info.plist
       - uses: actions/upload-artifact@v4
         with:
-          name: CountdownOverlay
-          path: build/CountdownOverlay.zip
+          name: MachinePromptsMan
+          path: build/MachinePromptsMan.zip
       - name: Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -55,8 +55,8 @@ jobs:
         # A re-run keeps its run number, so the release may already exist: replace its zip.
         run: |
           if gh release view "v$VERSION" >/dev/null 2>&1; then
-            gh release upload "v$VERSION" build/CountdownOverlay.zip --clobber
+            gh release upload "v$VERSION" build/MachinePromptsMan.zip --clobber
           else
-            gh release create "v$VERSION" build/CountdownOverlay.zip --target "$GITHUB_SHA" \
-              --title "CountdownOverlay $VERSION" --notes "$(git log -1 --format=%B)"
+            gh release create "v$VERSION" build/MachinePromptsMan.zip --target "$GITHUB_SHA" \
+              --title "Machine Prompts Man $VERSION" --notes "$(git log -1 --format=%B)"
           fi

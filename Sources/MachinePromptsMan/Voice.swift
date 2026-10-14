@@ -1,6 +1,6 @@
 import AppKit
 import AVFoundation
-import CountdownCore
+import MPMCore
 import FluidAudio
 import Foundation
 
@@ -597,7 +597,7 @@ final class Listener: ObservableObject {
         AVCaptureDevice.requestAccess(for: .audio) { granted in
             if asking { Task { @MainActor in PromptSafety.restore() } }
             DispatchQueue.main.async {
-                done(granted ? nil : "The microphone is off for CountdownOverlay: turn it on in System Settings → Privacy & Security → Microphone")
+                done(granted ? nil : "The microphone is off for Machine Prompts Man: turn it on in System Settings → Privacy & Security → Microphone")
             }
         }
     }

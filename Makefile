@@ -1,12 +1,12 @@
-# CountdownOverlay — needs Apple's command line tools with Swift 6 (or an Xcode 16+).
+# MachinePromptsMan — needs Apple's command line tools with Swift 6 (or an Xcode 16+).
 #   make build    compile (release) into .build/
-#   make app      assemble + ad-hoc sign build/CountdownOverlay.app (and the .zip)
+#   make app      assemble + ad-hoc sign build/MachinePromptsMan.app (and the .zip)
 #   make run      build the app and open it
 #   make install  install into ~/Applications (same place install.sh uses) and open it
-#   make test     run the CountdownCore test suite
+#   make test     run the MPMCore test suite
 #   make clean
 
-NAME := CountdownOverlay
+NAME := MachinePromptsMan
 APP  := build/$(NAME).app
 DEST := $(HOME)/Applications/$(NAME).app
 
