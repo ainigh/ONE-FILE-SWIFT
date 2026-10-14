@@ -242,6 +242,21 @@ final class SessionTests: XCTestCase {
         XCTAssertEqual(Announce.phrase("request_approved", r, voice: .fixed).text, "Check-up, 50 s. Step away from the desk.")
     }
 
+    /// The board shows the picks as Doing and Next before Go (mapStatus); the stored status otherwise.
+    func testMapStatusPreviewsThePicks() {
+        XCTAssertNil(s.intakeSubmit("10"))
+        XCTAssertNil(s.intakeSubmit("One"))
+        XCTAssertNil(s.intakeSubmit("Two"))
+        let one = s.intake.ids[0], two = s.intake.ids[1]
+        XCTAssertEqual(s.mapStatus(one), .doing)          // picked at the intake, not yet committed
+        XCTAssertEqual(s.displayStatus(one), .open)
+        XCTAssertEqual(s.mapStatus(two), .next)
+        s.pick(.d, two)                                   // Doing and Next are exclusive
+        XCTAssertEqual(s.mapStatus(two), .doing)
+        XCTAssertEqual(s.mapStatus(one), .open)
+        XCTAssertEqual(s.mapStatus(s.goal()!), .open)
+    }
+
     func testPlanRoundTrip() throws {
         let a = s.addChild(nil, "One")!
         _ = s.addChild(a, "Two")

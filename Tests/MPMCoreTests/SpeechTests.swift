@@ -41,6 +41,9 @@ final class SpeechTests: XCTestCase {
         XCTAssertEqual(SpokenText.sentences("Use e.g. butter. It costs 3.50 now. He said \"stop.\" Then left."),
                        ["Use e.g. butter.", "It costs 3.50 now.", "He said \"stop.\"", "Then left."])
         XCTAssertEqual(SpokenText.sentences("Ask J. Smith about it."), ["Ask J. Smith about it."])
+        // A lowercase two-letter word is not an initial; a curly quote after the dot belongs to the sentence.
+        XCTAssertEqual(SpokenText.sentences("Plan a. Then b."), ["Plan a.", "Then b."])
+        XCTAssertEqual(SpokenText.sentences("He said \u{201C}go.\u{201D} We went."), ["He said \u{201C}go.\u{201D}", "We went."])
     }
 
     func testSentencesSkipPunctuationOnly() {
