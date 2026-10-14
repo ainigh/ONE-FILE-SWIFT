@@ -17,7 +17,24 @@ Requires Xcode command line tools (`xcode-select --install`), macOS 11+.
 
 - **Left-click** the menubar icon → start countdown.
 - **Right-click** → menu with Start / Quit (Quit is disabled during a countdown).
-- Change `duration` in `AppDelegate` to adjust the length.
+- The length defaults to 5 seconds. Override it per launch with an argument
+  or an environment variable (argument wins; values are clamped to 1–3600):
+
+  ```sh
+  ./CountdownOverlay -duration 10
+  COUNTDOWN_SECONDS=10 ./CountdownOverlay
+  ```
+
+## Robustness notes
+
+- The count is derived from a deadline, not a once-per-second tick, so it
+  never drifts and resolves correctly if the Mac sleeps mid-countdown.
+- All key events to the process are swallowed by a local event monitor, and
+  the app re-activates itself if it loses focus, so Cmd-Q / Esc can't slip
+  through via another window.
+- Overlays are rebuilt when displays are added, removed or resized.
+- The digits scale with the smallest screen dimension.
+- Focus returns to the app that was frontmost before the countdown started.
 
 ## Optional: wrap it as a .app
 

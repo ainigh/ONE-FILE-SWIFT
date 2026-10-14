@@ -1,9 +1,32 @@
 import Cocoa
 
+// MARK: - Configuration
+
+/// Resolves the countdown length. Precedence: `-duration N` launch argument
+/// (read via UserDefaults' argument domain), then `COUNTDOWN_SECONDS` env var,
+/// then the built-in default. The value is clamped to a sane range.
+enum Config {
+    static let defaultDuration = 5
+    static let minDuration = 1
+    static let maxDuration = 3600
+
+    static var duration: Int {
+        var value = defaultDuration
+        if let env = ProcessInfo.processInfo.environment["COUNTDOWN_SECONDS"],
+           let parsed = Int(env.trimmingCharacters(in: .whitespaces)) {
+            value = parsed
+        }
+        if UserDefaults.standard.object(forKey: "duration") != nil {
+            value = UserDefaults.standard.integer(forKey: "duration")
+        }
+        return min(max(value, minDuration), maxDuration)
+    }
+}
+
 // MARK: - Overlay window (one per screen)
 
 final class OverlayWindow: NSWindow {
-    let label = NSTextField(labelWithString: "")
+    private let label = NSTextField(labelWithString: "")
 
     init(screen: NSScreen) {
         super.init(contentRect: screen.frame,
@@ -13,20 +36,28 @@ final class OverlayWindow: NSWindow {
                    screen: screen)
 
         level = .screenSaver                       // above everything, incl. full-screen apps
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         isOpaque = false
         backgroundColor = NSColor.black.withAlphaComponent(0.85)
         hasShadow = false
         ignoresMouseEvents = false                 // swallow clicks so they don't fall through
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
+        isExcludedFromWindowsMenu = true
+        animationBehavior = .none                  // appear instantly, no fade
+        isMovable = false
 
-        label.font = NSFont.monospacedDigitSystemFont(ofSize: 220, weight: .bold)
+        // Scale the digits with the screen so they fit on small displays
+        // and stay legible on large ones.
+        let shortSide = min(screen.frame.width, screen.frame.height)
+        let fontSize = min(max(shortSide * 0.28, 72), 320)
+        label.font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .bold)
         label.textColor = .white
         label.alignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
+        label.setAccessibilityLabel("Countdown")
 
-        let content = NSView(frame: screen.frame)
+        let content = NSView(frame: NSRect(origin: .zero, size: screen.frame.size))
         content.addSubview(label)
         NSLayoutConstraint.activate([
             label.centerXAnchor.constraint(equalTo: content.centerXAnchor),
@@ -35,14 +66,29 @@ final class OverlayWindow: NSWindow {
         contentView = content
     }
 
+    func setRemaining(_ seconds: Int) {
+        let text = "\(seconds)"
+        if label.stringValue != text {
+            label.stringValue = text
+        }
+    }
+
     // Allow the window to take focus so it captures key presses.
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 
     // Swallow Esc, Cmd-W, Cmd-Q, arrow keys, etc.
     override func keyDown(with event: NSEvent) {}
+    override func keyUp(with event: NSEvent) {}
+    override func flagsChanged(with event: NSEvent) {}
     override func cancelOperation(_ sender: Any?) {}
     override func performKeyEquivalent(with event: NSEvent) -> Bool { true }
+
+    // Swallow mouse interaction on the overlay itself.
+    override func mouseDown(with event: NSEvent) {}
+    override func rightMouseDown(with event: NSEvent) {}
+    override func otherMouseDown(with event: NSEvent) {}
+    override func scrollWheel(with event: NSEvent) {}
 }
 
 // MARK: - App delegate
@@ -51,33 +97,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var overlays: [OverlayWindow] = []
     private var timer: Timer?
-    private var remaining = 0
-    private let duration = 5
+    private var deadline: Date?
+    private var keyMonitor: Any?
+    private var previousApp: NSRunningApplication?
+    private var lastShown = -1
+    private let duration = Config.duration
 
-    private var isRunning: Bool { timer != nil }
+    private var isRunning: Bool { deadline != nil }
+
+    /// Whole seconds left, rounded up so "5" shows for the first full second.
+    private var remainingSeconds: Int {
+        guard let deadline = deadline else { return 0 }
+        return max(0, Int(ceil(deadline.timeIntervalSinceNow)))
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)      // no Dock icon, menubar only
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Countdown")
+            if let image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Countdown") {
+                button.image = image
+            } else {
+                button.title = "⏱"                 // fallback if SF Symbols are unavailable
+            }
+            button.toolTip = "Countdown Overlay (\(duration)s) — click to start, right-click for menu"
             button.target = self
             button.action = #selector(statusItemClicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(screensChanged),
-            name: NSApplication.didChangeScreenParametersNotification,
-            object: nil)
+        let center = NotificationCenter.default
+        center.addObserver(self,
+                           selector: #selector(screensChanged),
+                           name: NSApplication.didChangeScreenParametersNotification,
+                           object: nil)
+        center.addObserver(self,
+                           selector: #selector(appDidResignActive(_:)),
+                           name: NSApplication.didResignActiveNotification,
+                           object: nil)
+
+        // After sleep/wake the deadline may already have passed; resync at once.
+        NSWorkspace.shared.notificationCenter.addObserver(self,
+                                                          selector: #selector(workspaceDidWake(_:)),
+                                                          name: NSWorkspace.didWakeNotification,
+                                                          object: nil)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        teardown()
     }
 
     // Refuse to quit while the countdown is running.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         isRunning ? .terminateCancel : .terminateNow
     }
+
+    func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
 
     // MARK: Menubar interaction
 
@@ -91,10 +167,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Start Countdown", action: #selector(startCountdown), keyEquivalent: "")
+        menu.autoenablesItems = false              // honour the isEnabled flags below
+
+        let title = menu.addItem(withTitle: isRunning
+                                    ? "Counting down… \(remainingSeconds)s"
+                                    : "Countdown length: \(duration)s",
+                                 action: nil, keyEquivalent: "")
+        title.isEnabled = false
         menu.addItem(.separator())
-        let quit = menu.addItem(withTitle: "Quit", action: #selector(NSApp.terminate(_:)), keyEquivalent: "q")
+
+        let start = menu.addItem(withTitle: "Start Countdown",
+                                 action: #selector(startCountdown), keyEquivalent: "")
+        start.target = self
+        start.isEnabled = !isRunning
+
+        menu.addItem(.separator())
+        let quit = menu.addItem(withTitle: "Quit",
+                                action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        quit.target = NSApp
         quit.isEnabled = !isRunning
+
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil                      // restore click-to-start behaviour
@@ -104,22 +196,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func startCountdown() {
         guard !isRunning else { return }           // ignore clicks mid-countdown
-        remaining = duration
+
+        previousApp = NSWorkspace.shared.frontmostApplication
+        deadline = Date().addingTimeInterval(TimeInterval(duration))
+        lastShown = -1
+
         buildOverlays()
         updateLabels()
+        regainFocus()
 
-        NSApp.activate(ignoringOtherApps: true)
-        overlays.first?.makeKey()
+        // Swallow every key event delivered to this process, regardless of
+        // which window is key, so Cmd-Q etc. never reach the responder chain.
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { _ in nil }
 
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.tick()
-        }
-        RunLoop.main.add(timer!, forMode: .common)
+        // Tick often and derive the display from the deadline, so the count
+        // never drifts and recovers correctly after the machine sleeps.
+        let t = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in self?.tick() }
+        t.tolerance = 0.02
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
+    @objc private func workspaceDidWake(_ note: Notification) { tick() }
+    @objc private func appDidResignActive(_ note: Notification) { regainFocus() }
+
     private func tick() {
-        remaining -= 1
-        if remaining <= 0 {
+        guard isRunning else { return }
+        if remainingSeconds <= 0 {
             finish()
         } else {
             updateLabels()
@@ -127,14 +230,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func finish() {
+        teardown()
+
+        // Give focus back to whatever the user was using before we took over.
+        if let app = previousApp, !app.isTerminated, app != NSRunningApplication.current {
+            app.activate(options: [])
+        }
+        previousApp = nil
+    }
+
+    /// Stops the timer and removes all overlays. Safe to call repeatedly.
+    private func teardown() {
         timer?.invalidate()
         timer = nil
-        overlays.forEach { $0.orderOut(nil) }
+        deadline = nil
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
+        }
+        closeOverlays()
+    }
+
+    private func closeOverlays() {
+        overlays.forEach { $0.close() }
         overlays.removeAll()
     }
 
     private func buildOverlays() {
-        overlays.forEach { $0.orderOut(nil) }
+        closeOverlays()
         overlays = NSScreen.screens.map { screen in
             let w = OverlayWindow(screen: screen)
             w.orderFrontRegardless()
@@ -143,14 +266,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateLabels() {
-        overlays.forEach { $0.label.stringValue = "\(remaining)" }
+        let value = remainingSeconds
+        guard value != lastShown else { return }
+        lastShown = value
+        overlays.forEach { $0.setRemaining(value) }
     }
 
-    // Rebuild if a display is plugged/unplugged mid-countdown.
+    /// Keeps the overlay key and the app active for as long as the countdown
+    /// runs, so key events keep landing in our swallowing handlers.
+    private func regainFocus() {
+        guard isRunning else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, self.isRunning else { return }
+            NSApp.activate(ignoringOtherApps: true)
+            self.overlays.forEach { $0.orderFrontRegardless() }
+            self.overlays.first?.makeKey()
+        }
+    }
+
+    // Rebuild if a display is plugged/unplugged or resized mid-countdown.
     @objc private func screensChanged() {
         guard isRunning else { return }
+        lastShown = -1
         buildOverlays()
         updateLabels()
+        regainFocus()
     }
 }
 
