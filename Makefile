@@ -1,19 +1,19 @@
-# CountdownOverlay — everything needs only the Xcode command-line tools.
-#   make build    compile the bare binary (build/CountdownOverlay)
+# CountdownOverlay — needs Apple's command line tools with Swift 6 (or an Xcode 16+).
+#   make build    compile (release) into .build/
 #   make app      assemble + ad-hoc sign build/CountdownOverlay.app (and the .zip)
 #   make run      build the app and open it
 #   make install  install into ~/Applications (same place install.sh uses) and open it
+#   make test     run the CountdownCore test suite
 #   make clean
 
 NAME := CountdownOverlay
 APP  := build/$(NAME).app
 DEST := $(HOME)/Applications/$(NAME).app
 
-.PHONY: build app run install clean
+.PHONY: build app run install test clean
 
 build:
-	mkdir -p build
-	swiftc -O -o build/$(NAME) main.swift -framework Cocoa
+	swift build -c release --product $(NAME)
 
 app:
 	scripts/make-app.sh
@@ -29,5 +29,8 @@ install: app
 	open "$(DEST)"
 	@echo "Installed to $(DEST)"
 
+test:
+	swift test
+
 clean:
-	rm -rf ./build
+	rm -rf ./build ./.build

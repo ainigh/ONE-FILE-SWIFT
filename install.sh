@@ -20,9 +20,9 @@ PREVIOUS="${APPS:?}/.${NAME:?}-previous.app"
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 die() { printf '\n\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
 
-[[ "$(uname)" == Darwin ]] || die "$NAME is a Mac app (macOS 11 or newer)."
+[[ "$(uname)" == Darwin ]] || die "$NAME is a Mac app (macOS 14 or newer)."
 major="$(sw_vers -productVersion | cut -d. -f1)"
-[[ "$major" -ge 11 ]] || die "$NAME needs macOS 11 or newer; this Mac has $(sw_vers -productVersion)."
+[[ "$major" -ge 14 ]] || die "$NAME needs macOS 14 or newer; this Mac has $(sw_vers -productVersion)."
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp:?}"' EXIT
@@ -48,7 +48,8 @@ if [[ -z "$app" ]]; then
   mkdir -p "$tmp/src"
   curl -fsSL -o "$tmp/src.tar.gz" "https://codeload.github.com/$REPO/tar.gz/$sha"
   tar -xzf "$tmp/src.tar.gz" -C "$tmp/src" --strip-components 1
-  say "Building"
+  say "Building (a few minutes the first time: it fetches the speech models' package)"
+  # make-app.sh finds a Swift 6 toolchain (an installed Xcode will do) or says what to update.
   (cd "$tmp/src" && VERSION="1.0-${sha:0:7}" COMMIT="$sha" BRANCH="$BRANCH" scripts/make-app.sh)
   app="$tmp/src/build/$NAME.app"
 fi

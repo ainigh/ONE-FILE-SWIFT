@@ -21,7 +21,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>11.0</string>
+	<string>14.0</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>LSApplicationCategoryType</key>
@@ -32,5 +32,13 @@
 	<false/>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>To hear you when you choose Listen. What you say is written down on this Mac and never leaves it.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>To save what it says and hears in the folder you chose.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>To save what it says and hears in the folder you chose.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>To save what it says and hears in the folder you chose.</string>
 </dict>
 </plist>
