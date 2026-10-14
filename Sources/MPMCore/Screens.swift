@@ -107,7 +107,8 @@ extension Session {
         } else if st == .break {
             m.tone = .rest; m.heading = "Break over."; m.question = "Start round \(round + 1)?"
         }
-        m.spoken = m.heading + " " + m.line + " " + (m.question ?? "")
+        // The engine already said "Time's up." and the rest; the voice adds the question B is asked.
+        m.spoken = [m.line, m.question ?? ""].filter { !$0.isEmpty }.joined(separator: " ")
         return m
     }
 

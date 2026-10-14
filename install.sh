@@ -1,5 +1,5 @@
 #!/bin/bash
-# Installs (or reinstalls) CountdownOverlay.app into ~/Applications, then opens it. After this,
+# Installs (or reinstalls) MachinePromptsMan.app into ~/Applications, then opens it. After this,
 # updates come from the menu-bar icon (right-click → Check for Updates…).
 #
 #   curl -fsSL https://raw.githubusercontent.com/ainigh/ONE-FILE-SWIFT/main/install.sh | bash
@@ -12,7 +12,7 @@ set -euo pipefail
 REPO="ainigh/ONE-FILE-SWIFT"
 BRANCH="${BRANCH:-main}"
 APPS="${HOME:?}/Applications"
-NAME="CountdownOverlay"
+NAME="MachinePromptsMan"
 API="https://api.github.com/repos/$REPO"
 INSTALLED="${APPS:?}/${NAME:?}.app"
 PREVIOUS="${APPS:?}/.${NAME:?}-previous.app"
@@ -75,7 +75,7 @@ for _ in 1 2 3 4 5; do
 done
 if [[ "$started" == 1 ]]; then
   rm -rf "$PREVIOUS"
-  say "Done ($NAME $version): look for the timer icon in the menu bar."
+  say "Done ($NAME $version): look for the clock icon in the menu bar."
   exit 0
 fi
 

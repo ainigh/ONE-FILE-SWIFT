@@ -74,4 +74,17 @@ extension Session {
         guard let send = onFeed else { return }
         send(feedEnvelope(kind, data))
     }
+
+    public func feedHello() {
+        pushA("hello", .object(["note": .string("A's feed from Machine Prompts Man: one POST per thing A's screen shows; nothing is read back.")]))
+    }
+
+    public func feedTest() {
+        pushA("test", .object(["note": .string("sent from Admin › Feed")]))
+    }
+
+    /// An event from the app around the engine (the feed, the voice switch, the schedule).
+    public func logEvent(_ from: Part, _ to: Part?, _ outcome: Outcome, _ title: String, _ detail: String) {
+        ev(from, to, outcome, title, detail)
+    }
 }

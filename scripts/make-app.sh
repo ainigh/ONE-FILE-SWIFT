@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds build/CountdownOverlay.app and build/CountdownOverlay.zip (what a release carries) from
+# Builds build/MachinePromptsMan.app and build/MachinePromptsMan.zip (what a release carries) from
 # the Swift package. Needs a Mac with Apple's command line tools (xcode-select --install).
 #
 #   scripts/make-app.sh                            a local build
@@ -16,7 +16,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-NAME=CountdownOverlay
+NAME=MachinePromptsMan
 APP="build/$NAME.app"
 PB=/usr/libexec/PlistBuddy
 PLIST_VERSION="$($PB -c 'Print CFBundleShortVersionString' Info.plist 2>/dev/null || echo 1.0)"
@@ -74,8 +74,8 @@ done
 cp Info.plist "$APP/Contents/Info.plist"
 $PB -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
 $PB -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
-$PB -c "Add :CountdownCommit string $COMMIT" "$APP/Contents/Info.plist"
-$PB -c "Add :CountdownBranch string $BRANCH" "$APP/Contents/Info.plist"
+$PB -c "Add :MPMCommit string $COMMIT" "$APP/Contents/Info.plist"
+$PB -c "Add :MPMBranch string $BRANCH" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 BUNDLE_ID="$($PB -c 'Print CFBundleIdentifier' "$APP/Contents/Info.plist")"
