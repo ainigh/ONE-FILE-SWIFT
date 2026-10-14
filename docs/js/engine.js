@@ -10,7 +10,10 @@ function phaseLen() {
   return 0;
 }
 function left() { return running() ? Math.max(0, S.phaseEnd - S.T) : 0; }
-function enter(st, len) { S.state = st; S.frozen = false; S.phaseStart = S.T; S.phaseEnd = S.T + (len || 0); S.lastRem = null; S.strip = null; S.halfFired = false; }
+function enter(st, len) {
+  S.state = st; S.frozen = false; S.phaseStart = S.T; S.phaseEnd = S.T + (len || 0); S.lastRem = null; S.strip = null; S.halfFired = false;
+  pushA("phase", { phase: PHASE[st], length: len || 0, ends_at: len ? new Date(S.W + len * 1000).toISOString() : null, doing: title(slot("doing")) || null, next: title(slot("next")) || null, seated: Math.round(S.seated) });
+}
 // Every timed phase gets a reminder at half its length, whatever the length: the round has it from
 // the reminder arithmetic (q·2^(r−1) = R/2); the snooze, the check-up, the plan and the break get it here.
 function halfLine(len) { return "half-time reminder at " + digits(len / 2) + " left"; }
@@ -29,12 +32,14 @@ function startSession() {
   ev("man", "engine", "info", "open session", "seated " + fmt(S.seated) + ", R " + fmt(CFG.R) + ", r " + CFG.r + ", Ls " + fmt(CFG.Ls) + ", Lb " + fmt(CFG.Lb) + "\nA: " + (UI.auto ? "policy (autopilot)" : "a person"));
   enter("idle");
   say("Session open.");
+  pushA("session", { event: "open", R: CFG.R, r: CFG.r, Ls: CFG.Ls, Lb: CFG.Lb, auto: UI.auto });
 }
 function endSession() {
   if (!S.state) return;
   closeReq(S.req, "overtaken"); closeReq(S.sys, "overtaken");
   ev("engine", "timers", "info", "cancel timers", "");
   say("Session ended.", "rounds " + S.round + ", requests " + S.requests.length);
+  pushA("session", { event: "end", rounds: S.round, requests: S.requests.length });
   S.state = null; S.frozen = false; S.req = null; S.sys = null; S.held = null; S.turn = null; S.picks = { d: null, n: null };
   S.diff = []; S.lastRem = null; S.strip = null;
   UI.intake = { stage: firstStage(), ids: [] }; UI.gridRound = 0;
@@ -81,7 +86,7 @@ function startStrategy() {
   if (S.held && S.held.props) {
     ev("engine", "coordinator", "info", "render held output", "", S.turn && S.turn.id);
     ev("coordinator", "output", "ok", "say and " + S.held.props.length + " proposal(s) shown", S.held.props.map(function (p) { return p.text; }).join("\n"), S.turn && S.turn.id);
-    if (S.held.brief) ev("coordinator", "a", "ok", "brief shown to A", S.held.brief.text + "\n" + S.held.brief.forA, S.turn && S.turn.id);
+    if (S.held.brief) { ev("coordinator", "a", "ok", "brief shown to A", S.held.brief.text + "\n" + S.held.brief.forA, S.turn && S.turn.id); pushA("brief", { text: S.held.brief.text, forA: S.held.brief.forA }); }
   }
   speak("plan_start", { held: S.held && S.held.props ? { say: !!S.held.say, proposals: S.held.props.length } : null }, "Plan round " + (S.round + 1) + ", " + fmt(qU()) + ".");
   UI.boardView = "map";
@@ -131,6 +136,7 @@ function clockEnded() {
   if (st === "work" || st === "snooze") S.roundRun += len;
   S.frozen = true; S.reading = len; S.lastRem = null; S.strip = null;
   ev("timers", "engine", "info", "tick: " + PHASE[st].toLowerCase() + " end", "the clock stops; frozen until B presses Go");
+  pushA("phase", { phase: PHASE[st] + " ended", length: len, ends_at: null, reading: len });
   closeReq(S.req, "overtaken"); S.req = null;
   if (st === "work" || st === "snooze") {
     speak("time_up", {}, "Time's up."); sound("timeup");
@@ -171,6 +177,7 @@ function tick() {
       ev("timers", "engine", "info", "tick: reminder " + digits(t), "");
       speak("reminder", { remaining: t, reminderIndex: i, reminderCount: R.length }, fmt(t) + " left.");
       sound("tick");
+      pushA("reminder", { text: fmt(t) + " left.", remaining: Math.round(t), index: i, count: R.length, last: i === R.length - 1 });
       // The first r−1 reminders fade on their own; the last one covers the screen (default 32).
       if (i < R.length - 1) S.strip = { text: fmt(t) + " left.", until: performance.now() + 4000 };
       else { S.lastRem = { t: t }; S.strip = null; ev("engine", "output", "info", "last reminder: cover", "the clock keeps running"); }
@@ -183,6 +190,7 @@ function tick() {
       ev("timers", "engine", "info", "tick: half-time reminder " + digits(half), PHASE[st].toLowerCase() + " of " + fmt(len) + "; not from the reminder arithmetic");
       speak("reminder", { remaining: half, reminderIndex: 0, R: len }, fmt(half) + " left, halfway.");
       sound("tick");
+      pushA("reminder", { text: fmt(half) + " left, halfway.", remaining: Math.round(half), halfway: true });
       S.strip = { text: fmt(half) + " left, halfway.", until: performance.now() + 4000 };
     }
   }

@@ -15,7 +15,8 @@ var PARTS = {
   model: { t: "Assistant", up: "coordinator", what: "The built-in assistant: reads the plan, writes a note for B, proposals and a brief for A." },
   scheduler: { t: "Initiative", up: "coordinator", what: "Scheduled look-ins from Settings › Schedule." },
   store: { t: "Store", up: "engine", side: "r", what: "The plan: every change is a patch, logged with its round, and undoable." },
-  disk: { t: "Storage", up: "store", what: "This browser's storage, where the plan is kept between visits." }
+  disk: { t: "Storage", up: "store", what: "This browser's storage, where the plan is kept between visits." },
+  feed: { t: "A's feed", up: "a", what: "Pushes everything A's screen shows to the URL set under Admin › Feed. One way only." }
 };
 var LINKS = [["man", "store"], ["man", "coordinator"], ["coordinator", "store"], ["coordinator", "output"], ["coordinator", "a"]];
 var COLORS = { info: "--doing", ok: "--done", warning: "--blocked", error: "--stop" };
@@ -41,6 +42,7 @@ function notify(e) {
     if (ops.length) text = ops.join(" · ");
   }
   S.notes.push({ id: e.id, text: text, warn: e.outcome === "warning" || e.outcome === "error", at: performance.now() });
+  pushA("note", { text: text, warn: e.outcome === "warning" || e.outcome === "error", title: e.title, detail: e.detail });
   if (S.notes.length > 6) S.notes.shift();
 }
 // The Monitor: the parts as a mind map (mapview.js, the same map as B's board). A card says what
@@ -166,6 +168,6 @@ var mon = (function () {
 
 function renderAdmin() {
   Array.prototype.forEach.call($("adseg").querySelectorAll("button"), function (b) { b.setAttribute("aria-selected", String(b.getAttribute("data-t") === UI.adTab)); });
-  $("adp-monitor").hidden = UI.adTab !== "monitor"; $("adp-log").hidden = UI.adTab !== "log";
-  if (UI.adTab === "log") renderLogs();
+  $("adp-monitor").hidden = UI.adTab !== "monitor"; $("adp-log").hidden = UI.adTab !== "log"; $("adp-feed").hidden = UI.adTab !== "feed";
+  if (UI.adTab === "log") renderLogs(); else if (UI.adTab === "feed") renderFeed();
 }

@@ -24,7 +24,7 @@ var UI = { role: "b", voice: "rich", auto: true, board: false, boardView: "map",
   aTab: "", adTab: "monitor", gridRound: 0, intake: { stage: "name", ids: [] }, names: { b: "", a: "" },
   muted: false, model: "assistant",
   sheet: null, pop: null, depFor: null, renaming: null, renameVal: null, folded: {},
-  logPart: "", logProblems: false, logSel: null, schedule: [], reason: "", reasonFor: null };
+  feed: { url: "", on: false }, logPart: "", logProblems: false, logSel: null, schedule: [], reason: "", reasonFor: null };
 // Clocks run in real time. A developer can open app.html?speed=60 to run them faster while testing.
 var speed = 1, seatStart = 0, sessionSeq = 0;
 try { var sp = +(new URLSearchParams(location.search).get("speed") || 1); if (sp >= 1 && sp <= 120) speed = sp; } catch (e) {}
@@ -70,11 +70,12 @@ if (settingsSaved) {
   if (settingsSaved.model === "none" || settingsSaved.model === "assistant") UI.model = settingsSaved.model;
   if (VOICES.indexOf(settingsSaved.voice) >= 0) UI.voice = settingsSaved.voice;
   UI.muted = !!settingsSaved.muted;
+  if (settingsSaved.feed && typeof settingsSaved.feed.url === "string") UI.feed = { url: settingsSaved.feed.url.trim().slice(0, 2000), on: !!settingsSaved.feed.on && /^https?:\/\/\S+$/i.test(settingsSaved.feed.url.trim()) };
   if (Array.isArray(settingsSaved.schedule)) UI.schedule = settingsSaved.schedule.filter(function (s) { return s && typeof s.at === "string" && typeof s.why === "string"; }).map(function (s) { return { at: s.at, why: s.why }; });
 }
 // The round length is any whole number of minutes from 1 to 120: B names it at the intake.
 function validR(R) { return typeof R === "number" && R >= 60 && R <= 7200 && R % 60 === 0; }
-function saveSettings() { writeStore(SETTINGS_KEY, { cfg: nextCfg || CFG, model: UI.model, voice: UI.voice, muted: UI.muted, schedule: UI.schedule }); }
+function saveSettings() { writeStore(SETTINGS_KEY, { cfg: nextCfg || CFG, model: UI.model, voice: UI.voice, muted: UI.muted, schedule: UI.schedule, feed: UI.feed }); }
 var S;
 
 function mk(title, parent, created) {

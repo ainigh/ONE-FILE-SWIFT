@@ -447,6 +447,23 @@ table.rq tbody tr:hover td { background: color-mix(in srgb, var(--ink) 4%, trans
 table.rq td.m { font: 400 0.74rem/1.4 var(--font-mono); color: var(--ink2); font-variant-numeric: tabular-nums; }
 table.rq .empty { color: var(--ink3); padding: 16px 10px; white-space: normal; }
 
+/* ---------- Admin: A's feed ---------- */
+.feedbox { margin: 16px auto; width: min(640px, calc(100% - 32px)); display: grid; gap: 12px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.feedbox h4 { margin: 0; font: 500 1.2rem/1.2 var(--font-display); }
+.feedbox .muted { margin: 0; font-size: 0.86rem; color: var(--ink2); }
+.feedbox .fine { margin: 0; font-size: 0.76rem; }
+.feedform { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.feedform input { flex: 1 1 260px; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; font-size: 0.88rem; padding: 9px 11px; }
+.feedform input:focus { border-color: var(--doing); outline: none; }
+.feedform .btn { padding: 9px 14px; font-size: 0.86rem; }
+.feedlog { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 0.78rem; }
+.feedlog:empty { display: none; }
+.feedlog li { display: grid; grid-template-columns: 62px 70px minmax(0, 1fr); gap: 10px; padding: 4px 0; border-top: 1px solid var(--line); }
+.feedlog .tm { font: 400 0.72rem/1.4 var(--font-mono); color: var(--ink3); }
+.feedlog .k { color: var(--ink2); }
+.feedlog li.no .w { color: var(--stop); }
+.feedlog li.ok .w { color: var(--ink3); }
+
 /* ---------- Admin: the Monitor ---------- */
 .mon-wrap { display: grid; grid-template-rows: minmax(0, 1fr) auto; position: absolute; inset: 0; }
 

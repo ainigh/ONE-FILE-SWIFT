@@ -54,6 +54,7 @@ function raise(to) {
   r.policy = policyFor(to);
   S.req = r;
   ev("man", "engine", "info", "request " + r.id + ": " + r.label, "from " + r.from_phase + ", sent " + stamp(r.sent_at) + "\npolicy default: " + (r.policy[0] === "approved" ? "approve" : "refuse, “" + r.policy[1] + "”") + "\nthe clock keeps running");
+  pushA("request", feedReq(r));
   if (UI.auto) decide(r, r.policy[0], r.policy[1], "policy");
   else ev("engine", "a", "info", "request " + r.id + " waits for A", r.label + "\npolicy default shown beside it");
 }
@@ -66,17 +67,20 @@ function decide(r, verdict, reason, by) {
     r.label + (r.reason ? "\nreason: " + r.reason : "") + "\ndecided by " + by + ", after " + fmt((r.decided_at - r.sent_at) / 1000));
   // The sit check rides on the approval of the next round: the offer may be a break first.
   if (verdict === "approved" && r.to_phase === "work" && S.state === "strategy" && !S.frozen && sitCheck()) { r.to_phase = "break"; r.label += ", break first"; }
+  pushA("verdict", feedReq(r));
 }
 function sysRaise(to) {
   var r = newReq(to, "system");
   r.policy = ["approved", ""]; r.decided_at = S.W; r.decided_by = "policy"; r.verdict = "approved";
   S.sys = r;
   ev("engine", "output", "info", "System raises " + r.id + ": " + r.label, "approved by policy; frozen until B presses Go");
+  pushA("request", feedReq(r));
 }
 function closeReq(r, outcome) {
   if (!r || r.outcome) return;
   r.outcome = outcome;
   ev("engine", null, outcome === "overtaken" ? "warning" : "info", "request " + r.id + " " + outcome, r.label);
+  pushA("outcome", feedReq(r));
 }
 // B presses Go: the agreement. This clock stops and the next starts at the same instant.
 function accept(r) {
@@ -84,6 +88,7 @@ function accept(r) {
   r.accepted_at = S.W; r.outcome = "accepted";
   var gap = fmt((r.accepted_at - r.decided_at) / 1000);
   ev("man", "engine", "info", "Go: " + r.label, (r.raised_by === "system" ? "freeze " : "confirmed after ") + gap);
+  pushA("outcome", feedReq(r));
   if (r === S.req) S.req = null;
   if (r === S.sys) S.sys = null;
   if (S.sys) { closeReq(S.sys, "overtaken"); S.sys = null; }
@@ -93,6 +98,7 @@ function ack(r) {
   if (!r || r.outcome) return;
   r.accepted_at = S.W; r.outcome = "acknowledged";
   ev("man", "engine", "info", "OK: " + r.label + " refused", r.reason);
+  pushA("outcome", feedReq(r));
   S.req = null;
 }
 function nextPhase() {
