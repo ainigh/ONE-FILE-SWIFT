@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Machine Prompts Man · 2.1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F7F7F8" media="(prefers-color-scheme: light)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235B8DEF' stroke-width='3'/%3E%3Cpath d='M16 8v8l5 3' fill='none' stroke='%235B8DEF' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta name="description" content="Work in timed rounds on your Mac. Say what you are doing and what is next, let the ring run, step away, plan, repeat. Every phase change is a handshake.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#top">Skip to content</a>
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="Machine Prompts Man, top of page">
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="var(--line)" stroke-width="2.4"/><circle cx="10" cy="10" r="7.5" fill="none" stroke="var(--doing)" stroke-width="2.4" stroke-dasharray="35.3 47.1" transform="rotate(-90 10 10)"/></svg>
+      Machine Prompts Man
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a class="hide-sm" href="#try">Try a round</a>
+      <a class="hide-sm" href="#arithmetic">The arithmetic</a>
+      <a class="hide-sm" href="#tour">The app</a>
+      <a class="hide-sm" href="#inside">Inside</a>
+      <a class="btn small" href="app.html">Open the app</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero" style="border-top:0">
+  <div class="wrap">
+    <div class="hero-copy">
+      <span class="label">A work clock for macOS</span>
+      <h1>Pick two.<br>Work ten.<br><span class="quiet">Step away.</span></h1>
+      <p class="lede">You choose <strong>what you are doing</strong> and <strong>what comes next</strong>. The ring counts down a ten-minute round. When it ends you leave the desk for a while, plan the next round, and start again. The rhythm is the product.</p>
+      <div class="cta-row">
+        <a class="btn primary" href="#try">Try a round</a>
+        <a class="btn" href="app.html">Open the app</a>
+      </div>
+      <p class="fine">For macOS 14 or later. Your plan stays on your Mac.</p>
+    </div>
+
+    <figure class="instrument" aria-label="A round running by itself, sped up">
+      <div class="inst-head">
+        <span class="label state" id="st">Work</span>
+        <span class="mono meta" id="meta">Round 3 · Seated 30 min</span>
+      </div>
+      <div class="ring-box">
+        <svg viewBox="0 0 220 220" aria-hidden="true">
+          <circle class="ring-track" cx="110" cy="110" r="104" fill="none" stroke-width="6"/>
+          <circle class="ring-arc" id="arc" cx="110" cy="110" r="104" fill="none" stroke="var(--doing)" stroke-width="6"
+                  stroke-dasharray="653.45" stroke-dashoffset="250" transform="rotate(-90 110 110)"/>
+        </svg>
+        <div class="ring-center">
+          <span class="digits" id="dg">6:12</span>
+          <span class="counts" id="ct">left in the round</span>
+        </div>
+      </div>
+      <div class="slots">
+        <div class="slot"><span class="dot" style="background:var(--doing)"></span><span class="k">Doing</span><span class="v" id="sd">Fix the login bug</span></div>
+        <div class="slot"><span class="dot" style="background:var(--next)"></span><span class="k">Next</span><span class="v" id="sn">Write onboarding copy</span></div>
+      </div>
+      <p class="announce" id="an">Round 3. Fix the login bug doing, Write onboarding copy next. 10 min, starting now.</p>
+      <div class="inst-foot">
+        <span class="fine">The app's own wording, sped up 60×</span>
+        <button class="toggle" id="pp" type="button" aria-pressed="false">Pause</button>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<!-- ======================= TRY A ROUND ======================= -->
+<section id="try">
+  <div class="wrap section-inner">
+    <div class="section-head">
+      <span class="label">Try a round</span>
+      <h2>Your turn. Run a session yourself.</h2>
+      <p>This is the app, working, in your browser. You are <b>B</b>, the one who does the work. The first screen asks one question; answer it twice and you are ready. From then on you have one button, <b>Next phase</b>, and every phase change is a handshake: you ask, <b>A</b> says yes or not yet, and you press <b>Go</b>. Only two things ever change a clock: the clock running out, and your Go. When time is up the clock stops and waits for you, however long you are away. A runs on <b>autopilot</b> here, so answers are instant. Use the <b>B</b>, <b>A</b> and <b>Admin</b> tabs in the app's header to answer as A yourself or to watch as Admin. <kbd>Space</kbd> does the one thing each screen asks for.</p>
+    </div>
+  </div>
+  <div class="bleed">
+    <div class="sim-shell">
+      <iframe class="appframe" id="appframe" src="app.html" title="Machine Prompts Man, the app, running in this page" loading="lazy"></iframe>
+      <div class="cta-row"><a class="btn" href="app.html">Open the app full screen</a><span class="fine">Same app, its own page: app.html. Add <span class="mono">#a</span> or <span class="mono">#admin</span> to open another screen.</span></div>
+      <p class="fine">Nothing on B's screen stops a clock. Next phase only asks; the clock you are in keeps running until you press Go, and Go stops it and starts the next one at the same instant. Check-up, planning and the movement break start on their own when the phase before them ends, then wait, frozen, until you press Go. Close the window and the round carries on in the menu bar. The model here is an example that runs in the page; in the app it is your own, on your Mac or through Anthropic.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ======================= THE CYCLE ======================= -->
+<section id="round">
+  <div class="wrap section-inner">
+    <div class="section-head">
+      <span class="label">One round, start to finish</span>
+      <h2>The operation is the whole idea.</h2>
+      <p>Every round runs the same six beats. You ask for the round and you ask to move on; everything else is timed for you. Every change of phase ends at your Go, and nothing changes a clock but the clock running out or that Go.</p>
+    </div>
+    <div class="cycle" id="cycle">
+      <article class="phase" data-k="commit" style="--c:var(--next)">
+        <div class="row"><span class="name">Ask</span><span class="len">2 lines</span></div>
+        <h3>Say two things</h3>
+        <p>What you are doing now, and what comes next. OK asks to start; Go starts the ring.</p>
+        <p class="keys">OK, then <kbd>Space</kbd> for Go</p>
+      </article>
+      <article class="phase" data-k="work" style="--c:var(--doing)">
+        <div class="row"><span class="name">Work</span><span class="len">10:00</span></div>
+        <h3>The ring runs</h3>
+        <p>A soft tick at 5:00 and 2:30 left; at 1:15 the screen says so. Done early? Ask to move on.</p>
+        <p class="keys">Next phase, then Go</p>
+      </article>
+      <article class="phase" data-k="timeup" style="--c:var(--stop)">
+        <div class="row"><span class="name">Time's up</span><span class="len">frozen</span></div>
+        <h3>The clock waits</h3>
+        <p>Time stops and covers the screen. Go to step away, or snooze for 1:15 more, up to three times. Asleep? Nothing runs until you are back.</p>
+        <p class="keys">Go · Snooze</p>
+      </article>
+      <article class="phase" data-k="away" style="--c:var(--ink2)">
+        <div class="row"><span class="name">Check-up</span><span class="len">computed</span></div>
+        <h3>Step away</h3>
+        <p>The cost of the round, and it cannot be shortened. Nothing to do and nothing to edit: the app reads the round while you are gone.</p>
+        <p class="keys">Nothing to press</p>
+      </article>
+      <article class="phase" data-k="plan" style="--c:var(--next)">
+        <div class="row"><span class="name">Plan</span><span class="len">1:15</span></div>
+        <h3>Plan the next one</h3>
+        <p>Read what changed and the advice, pick the next pair, and ask to start. If time runs out, the app keeps the pair you have.</p>
+        <p class="keys">Start round, then Go</p>
+      </article>
+      <article class="phase" data-k="move" style="--c:var(--rest)">
+        <div class="row"><span class="name">Move</span><span class="len">3:00</span></div>
+        <h3>Stand up</h3>
+        <p>Every 45 minutes seated, a movement break. The plan locks until it ends.</p>
+        <p class="keys">Every 45 min</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= ARITHMETIC ======================= -->
+<section id="arithmetic">
+  <div class="wrap section-inner">
+    <div class="section-head">
+      <span class="label">The arithmetic</span>
+      <h2>Finish more, rest less. Snooze, rest more.</h2>
+      <p>How long the check-up after a round lasts is not a setting you fiddle with. It is computed from how the round went, and asking to cut it short gets a polite “not yet”. Try it.</p>
+    </div>
+    <div class="arith">
+      <div style="display:grid;gap:24px;min-width:0">
+        <div class="formula" aria-label="Check-up equals 1 minute 15 seconds, times 2 to the power of snoozes plus one, divided by finished plus one">
+          check-up = 1:15 × 2<sup><span class="v">snoozes</span>+1</sup> ÷ (<span class="v">finished</span> + 1)
+        </div>
+        <ul class="points">
+          <li style="--c:var(--blocked)"><span><b>Each snooze doubles it.</b> More time now costs more time later, so you only take it when the round really needs it.</span></li>
+          <li style="--c:var(--done)"><span><b>Each step you finish divides it.</b> Clear three in a round and you are back in under a minute.</span></li>
+          <li style="--c:var(--rest)"><span><b>A long check-up counts as moving.</b> Three minutes or more resets your seated time, which pushes the next movement break back.</span></li>
+        </ul>
+      </div>
+      <div class="calc" role="group" aria-labelledby="calc-title">
+        <span class="label" id="calc-title">Your round</span>
+        <div class="picker">
+          <div class="row"><span>Snoozes used</span><span class="fine mono">up to 3</span></div>
+          <div class="seg" style="--c:var(--blocked)" role="group" aria-label="Snoozes used">
+            <button type="button" id="z0" aria-pressed="true">0</button><button type="button" id="z1" aria-pressed="false">1</button><button type="button" id="z2" aria-pressed="false">2</button><button type="button" id="z3" aria-pressed="false">3</button>
+          </div>
+        </div>
+        <div class="picker">
+          <div class="row"><span>Steps finished</span><span class="fine mono">this round</span></div>
+          <div class="seg" style="--c:var(--done)" role="group" aria-label="Steps finished">
+            <button type="button" id="x0" aria-pressed="false">0</button><button type="button" id="x1" aria-pressed="true">1</button><button type="button" id="x2" aria-pressed="false">2</button><button type="button" id="x3" aria-pressed="false">3</button>
+          </div>
+        </div>
+        <div class="result" aria-live="polite">
+          <span class="label">Check-up</span>
+          <span class="big" id="away">1:15</span>
+          <div class="bar" aria-hidden="true"><i id="awaybar"></i></div>
+          <span class="why" id="why">No snoozes and one step finished. Enough to stand, stretch and look out of a window.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= BETWEEN ROUNDS ======================= -->
+<section id="model">
+  <div class="wrap section-inner">
+    <div class="split">
+      <div class="section-head">
+        <span class="label">Between rounds</span>
+        <h2>Advice arrives at the boundary. Never during the work.</h2>
+        <p>Connect a language model on your own Mac through Ollama, or use Anthropic. It reads your plan once per round, while you are away, and speaks only when you are planning. It suggests. You decide. Nothing changes in your plan until you accept it.</p>
+        <p>No model? Everything else runs exactly the same.</p>
+      </div>
+      <div class="held" aria-label="Example of the model's output between rounds">
+        <span class="label">Between rounds</span>
+        <p class="say">Two cleared this round. The demo is blocked on login, so keep login as Doing and move the copy to Next.</p>
+        <p class="q">Should the FAQ ship with the beta, or after it?</p>
+        <div class="prop">
+          <div><span class="t">Mark “Reproduce on Safari” as <span class="tag-done">done</span></span><span class="acts"><b>Accept</b><span>Reject</span></span></div>
+          <div><span class="t">Add “Write FAQ” under “Onboarding copy”</span><span class="acts"><b>Accept</b><span>Reject</span></span></div>
+          <div><span class="t">Set “Onboarding copy” as <span class="tag-next">next</span></span><span class="acts"><b>Accept</b><span>Reject</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= THE TOUR ======================= -->
+<section id="tour">
+  <div class="wrap section-inner">
+    <div class="section-head">
+      <span class="label">The rest of the app</span>
+      <h2>A plan you can see, and a clock you can always find.</h2>
+      <p>Four more surfaces do the quiet work around the round: the graph and the grid for the plan, the menu bar and its cards for the time, and Settings for the numbers.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Screens">
+      <button role="tab" type="button" id="tab-graph" aria-selected="true" aria-controls="panel-graph">Strategy</button>
+      <button role="tab" type="button" id="tab-grid" aria-selected="false" aria-controls="panel-grid">Grid</button>
+      <button role="tab" type="button" id="tab-menubar" aria-selected="false" aria-controls="panel-menubar">Menu bar and cards</button>
+      <button role="tab" type="button" id="tab-settings" aria-selected="false" aria-controls="panel-settings">Settings</button>
+    </div>
+    <div class="stage">
+      <div role="tabpanel" id="panel-graph" aria-labelledby="tab-graph">
+        <div class="caption"><b>Strategy: the plan as a map.</b><span>Your plan as a tree, one click from the round. The filled pill is Doing, the outlined one is Next. Dashed amber means a step is waiting on another, with an arrow from what it waits for. The model's suggestions appear as faint dashed ghosts until you accept them. Right-click any step for everything you can do to it; type a line in the quick-add field to add one. The board locks during check-up and the break.</span></div>
+        <div class="mock mock-scroll"><div class="mock-graph" id="tourgraph"></div></div>
+      </div>
+      <div role="tabpanel" id="panel-grid" aria-labelledby="tab-grid" hidden>
+        <div class="caption"><b>The grid: the plan as a table, read only.</b><span>The same plan as a table, written by the app from the plan and never typed into. A round picker shows any round as it ended and what changed in it: what A reads to judge a request, and what you read to see where the time went.</span></div>
+        <div class="mock"><div class="mock-scroll">
+          <table class="grid">
+            <thead><tr><th>Title</th><th>Status</th><th>Due</th><th>Progress</th><th>Links</th><th>Updated</th></tr></thead>
+            <tbody>
+              <tr><td>Ship the beta</td><td class="st" style="color:var(--ink2)">open</td><td>Nov 3</td><td><div class="pbar"><i style="width:35%"></i></div></td><td class="mono">2</td><td style="color:var(--ink2)">updated today</td></tr>
+              <tr class="sel"><td style="padding-left:28px">Fix the login bug</td><td class="st" style="color:var(--doing)">doing</td><td>Oct 16</td><td><div class="pbar"><i style="width:60%"></i></div></td><td class="mono">1</td><td style="color:var(--ink2)">updated today</td></tr>
+              <tr><td style="padding-left:44px">Reproduce on Safari</td><td class="st" style="color:var(--done)">done</td><td style="color:var(--ink3)">—</td><td><div class="pbar"><i style="width:100%"></i></div></td><td class="mono">0</td><td style="color:var(--ink2)">updated today</td></tr>
+              <tr><td style="padding-left:28px">Write onboarding copy</td><td class="st" style="color:var(--next)">next</td><td>Oct 20</td><td><div class="pbar"><i style="width:10%"></i></div></td><td class="mono">3</td><td style="color:var(--ink2)">updated 2d ago</td></tr>
+              <tr><td style="padding-left:28px">Record the demo</td><td class="st" style="color:var(--blocked)">blocked</td><td>Oct 24</td><td><div class="pbar"><i style="width:0%"></i></div></td><td class="mono">0</td><td style="color:var(--ink2)">updated 3d ago</td></tr>
+              <tr><td style="padding-left:28px;text-decoration:line-through;color:var(--ink2)">Redo the pricing page</td><td class="st" style="color:var(--ink2)">crossed out</td><td style="color:var(--ink3)">—</td><td><div class="pbar"><i style="width:0%"></i></div></td><td class="mono">0</td><td style="color:var(--ink2)">updated 5d ago</td></tr>
+            </tbody>
+          </table></div>
+          <div class="quicklog">Round 1 · 2 · <b style="color:var(--ink)">3</b> · Now</div>
+        </div>
+      </div>
+      <div role="tabpanel" id="panel-menubar" aria-labelledby="tab-menubar" hidden>
+        <div class="caption"><b>The menu bar and its cards.</b><span>Close the window and the round keeps going: a ring and the minutes in the menu bar. When time is up the screen is covered and the clock waits for your Go; during a movement break a band runs across the top of the screen. Right-click the menu-bar item for everything else.</span></div>
+        <div class="mb-scene">
+          <div class="macbar">
+            <div class="bar-row"><span>Wi‑Fi</span><span>Thu 14:32</span>
+              <span class="item"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-opacity="0.25" stroke-width="2"/><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--doing)" stroke-width="2" stroke-linecap="round" stroke-dasharray="34.56" stroke-dashoffset="13" transform="rotate(-90 7 7)"/></svg><span class="mono">6:12</span></span>
+            </div>
+            <div class="macmenu" aria-label="The menu-bar menu">
+              <span>Open Window</span><hr>
+              <span>End Session</span><span>Session Transcript</span><span>System Monitor</span><hr>
+              <span>Test Mode (60×)</span><span>Mute Sounds</span><span>Open at Login</span><hr>
+              <span>Schedule…</span><span>Settings… <em>⌘,</em></span><hr>
+              <span>Quit Machine Prompts Man <em>⌘Q</em></span>
+            </div>
+          </div>
+          <div class="cards-stack">
+            <div class="tu-static"><h4>Time's up.</h4><div class="btns"><span class="p">Go</span><span>Snooze · 1:15 · 2 left</span></div></div>
+            <div class="band-static"><span class="label" style="color:inherit">Break</span><span>Stand up and move.</span><span class="mono">2:41</span></div>
+          </div>
+        </div>
+      </div>
+      <div role="tabpanel" id="panel-settings" aria-labelledby="tab-settings" hidden>
+        <div class="caption"><b>Settings.</b><span>Five numbers set the whole rhythm. Change the round length and every derived value, from snooze length to the away-time table, updates as you type.</span></div>
+        <div class="mock settings-mock">
+          <div class="tabsrow"><span class="on">Session</span><span>Model</span><span>Attention</span><span>General</span></div>
+          <div class="grp">
+            <div class="kv"><span>Round length</span><span class="val">10 <small>min</small></span></div>
+            <div class="kv"><span>Reminders per round</span><span class="val">3</span></div>
+            <div class="kv"><span>Sitting limit<span class="caption2">Set from current health guidance.</span></span><span class="val">45 <small>min</small></span></div>
+            <div class="kv"><span>Movement break</span><span class="val">3 <small>min</small></span></div>
+          </div>
+          <div class="grp">
+            <h5>Derived</h5>
+            <div class="kv"><span>Base unit</span><span class="val">1:15</span></div>
+            <div class="kv"><span>Snoozes per round</span><span class="val">3</span></div>
+            <div class="kv"><span>Reminders</span><span class="val">5:00, 2:30, 1:15</span></div>
+            <div class="stable">
+              <table aria-label="Away time by snoozes (rows) and steps finished (columns)">
+                <tr><th>snoozes \ finished</th><th>0</th><th>1</th><th>2</th><th>3</th></tr>
+                <tr><th>0</th><td>2:30</td><td>1:15</td><td>50 s</td><td>38 s</td></tr>
+                <tr><th>1</th><td>5 min</td><td>2:30</td><td>1:40</td><td>1:15</td></tr>
+                <tr><th>2</th><td>10 min</td><td>5 min</td><td>3:20</td><td>2:30</td></tr>
+                <tr><th>3</th><td>20 min</td><td>10 min</td><td>6:40</td><td>5 min</td></tr>
+              </table>
+            </div>
+          </div>
+          <div class="foot"><span>Revert</span><span class="p">Save</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= INSIDE ======================= -->
+<section id="inside">
+  <div class="wrap section-inner">
+    <div class="section-head">
+      <span class="label">Inside</span>
+      <h2>Nine parts, and every hand-off between them, live.</h2>
+      <p>The Monitor draws the app as it runs. A dot travels each time one part hands something to another: a request from B to the engine, a verdict from the policy, a tick to the engine, a patch to the store, a prompt to the model. A part that is working shows an arc; for a model turn, the arc fills against its deadline. In the round above it is wired to the session, so everything A and B do shows up on the Admin screen. A's <b>Requests</b> list every request with its three timestamps, the policy's default and the verdict, and the <b>Event log</b> keeps everything else.</p>
+    </div>
+    <div class="cta-row">
+      <button class="btn" type="button" data-open-tab="monitor">Open the Admin screen</button>
+      <button class="btn" type="button" data-open-tab="requests">Open A's requests</button>
+      <button class="btn" type="button" data-open-tab="board">Open B's board</button>
+    </div>
+    <p class="fine">In the app the Monitor is a developer tool, and the events are the app's own.</p>
+  </div>
+</section>
+
+<!-- ======================= FIRST TEN MINUTES ======================= -->
+<section id="start">
+  <div class="wrap section-inner">
+    <div class="section-head">
+      <span class="label">Your first ten minutes</span>
+      <h2>From opening it to your first round.</h2>
+      <p>The app lives in your menu bar. Click it for the window; right-click it for the menu. Nothing on the first screen needs a manual.</p>
+    </div>
+    <ol class="steps">
+      <li><h3>Say what you're doing</h3><p>The first screen asks one thing: what would you like to do now? Type a line and press Return.</p></li>
+      <li><h3>Say what's next</h3><p>The same question again. Your second line becomes Next. The goal above them is named later, if ever.</p></li>
+      <li><h3>Ready? OK</h3><p>Add more steps if you like, then OK. That asks to open the session and start round one.</p></li>
+      <li><h3>Go</h3><p>“Ready when you are.” Press Go and the ring starts. Nothing else ever starts a round.</p></li>
+      <li><h3>Next phase</h3><p>Done early? Press Next phase to ask to move on, then Go. Not done? When time is up, the screen says so and waits.</p></li>
+      <li><h3>Connect your model</h3><p>Optional. Settings <kbd>⌘</kbd><kbd>,</kbd> → Model → Ollama, then type the name of a model you have pulled.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section id="what">
+  <div class="wrap section-inner" style="gap:24px">
+    <div class="section-head">
+      <span class="label">What it is, briefly</span>
+      <p style="color:var(--ink);font-size:1.12rem">A menu-bar app with three parts: a plan you keep as a tree of steps, a session engine that runs the rounds by fixed rules, and an optional model consulted once per round.</p>
+    </div>
+    <div class="facts">
+      <div><b>Deterministic</b><span>The same choices give the same clock, every time.</span></div>
+      <div><b>Local</b><span>Your plan and its full history are saved on your Mac.</span></div>
+      <div><b>Quiet</b><span>Four short sounds, no streaks, no scores, no confetti.</span></div>
+      <div><b>Yours</b><span>The model proposes. Only you change the plan.</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="access">
+  <div class="wrap section-inner">
+    <div class="access">
+      <div class="section-head">
+        <span class="label">Access</span>
+        <h2>Ten minutes from now, you could be in round one.</h2>
+        <p>Machine Prompts Man runs on macOS 14 or later. You can start right now in your browser: the same app, the same rules, every screen.</p>
+      </div>
+      <div class="cta-row">
+        <a class="btn primary" href="app.html">Open the app</a>
+        <a class="btn" href="#try">Try a round here first</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Machine Prompts Man</span>
+    <span>Work in rounds. Rest by the numbers.</span>
+  </div>
+</footer>
+
+<script src="js/announce.js"></script>
+<script src="js/site.js"></script>
+</body>
+</html>
