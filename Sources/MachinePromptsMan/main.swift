@@ -1,5 +1,5 @@
 import Cocoa
-import CountdownCore
+import MPMCore
 
 // MARK: - Configuration
 
