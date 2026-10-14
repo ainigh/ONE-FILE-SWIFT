@@ -85,9 +85,9 @@ public enum SpokenText {
                                                      "st.", "no.", "approx.", "fig.", "p.m.", "a.m."]
 
     private static func endsWithAbbreviation(_ s: String) -> Bool {
-        guard let last = s.split(whereSeparator: \.isWhitespace).last?.lowercased() else { return false }
-        let word = last.trimmingCharacters(in: CharacterSet(charactersIn: "(\"'”’)]"))
-        if abbreviations.contains(word) { return true }
+        guard let last = s.split(whereSeparator: \.isWhitespace).last else { return false }
+        let word = String(last).trimmingCharacters(in: CharacterSet(charactersIn: "(\"'”’)]"))
+        if abbreviations.contains(word.lowercased()) { return true }
         // A single capital and a dot ("J. Smith") is an initial; "Plan a." is a sentence.
         return word.count == 2 && word.first!.isUppercase
     }
