@@ -113,7 +113,6 @@ public final class Session {
     public internal(set) var strip: Strip?
     var feedSeq = 0
     public var intake = Intake(stage: .name, ids: [])
-    public var gridRound = 0
 
     public init(cfg: SessionConfig = .default, now: Date = Date()) {
         self.cfg = cfg
@@ -228,7 +227,7 @@ public final class Session {
         pushA("session", .object(["event": .string("end"), "rounds": .int(round), "requests": .int(requests.count)]))
         state = nil; frozen = false; reqId = nil; sysId = nil; held = nil; turn = nil; picks = Pair()
         diff = []; lastRem = nil; strip = nil
-        intake = Intake(stage: firstStage(), ids: []); gridRound = 0
+        intake = Intake(stage: firstStage(), ids: [])
     }
 
     func startRound() {

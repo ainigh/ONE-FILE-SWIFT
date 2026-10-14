@@ -396,7 +396,6 @@ extension Session {
         let count = nodes.count
         nodes = [:]; seq = 0; pn = 0; doneAt = [:]; undoStack = []; redoStack = []; selected = nil; picks = Pair()
         intake = Intake(stage: firstStage(), ids: [])
-        gridRound = 0
         _ = onSavePlan?(snapshot())
         ev(.man, .store, .info, "plan cleared", "\(Format.n(count, "step", "steps")) removed")
         return true

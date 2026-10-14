@@ -51,7 +51,7 @@ struct MonitorView: View {
         HStack(spacing: 0) {
             MapView(spec: spec, links: links, pulses: pulses, focus: app.monitorSel?.rawValue,
                     legend: [(.doing, "Hand-off", false), (.done, "Done", false), (.blocked, "Warning", false), (.stop, "Error", false), (.ink3, "Also hands off", true)],
-                    empty: "", onBackground: { app.monitorSel = nil }, onFold: { _ in }, now: nil,
+                    empty: "", onBackground: { app.monitorSel = nil }, onFold: { _ in }, now: nil, fitTick: app.mapFit,
                     card: { id, _ in PartCard(part: Part(rawValue: id) ?? .engine) },
                     overlay: { _, _ in EmptyView() })
             Rectangle().fill(Color.line).frame(width: 1)

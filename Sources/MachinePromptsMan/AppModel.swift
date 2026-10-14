@@ -53,6 +53,11 @@ final class AppModel: ObservableObject {
     @Published var reason = ""
     @Published var reasonFor: String?
     @Published var gridRound = 0
+    /// The map on screen fits itself when this changes (F, or the Fit button).
+    @Published var mapFit = 0
+    /// The map scrolls to this card and zooms in when the tick changes (N, or the Now button).
+    @Published var mapCentre: String?
+    @Published var mapCentreTick = 0
 
     // MARK: Settings kept on this Mac
     @Published private(set) var voiceOn = true
@@ -174,6 +179,20 @@ final class AppModel: ObservableObject {
 
     func showToast(_ t: String, error: Bool) {
         toast = ToastState(text: t, error: error, until: session.mono() + min(8000, 2000 + Double(t.count) * 60))
+    }
+
+    func fitMap() { mapFit &+= 1 }
+    func centreMap(on id: String) { mapCentre = id; mapCentreTick &+= 1 }
+
+    /// Now: select Doing (the pick while B plans), unfold the branch above it, and bring it to the middle.
+    func centreOnDoing() {
+        let s = session
+        let d = s.canPick() ? s.commitPair().d : s.slot(.doing)
+        guard let d = d else { showToast("Nothing is Doing yet.", error: false); return }
+        s.selected = d
+        var p = s.nodes[d]?.parent
+        while let q = p { folded.remove(q); p = s.nodes[q]?.parent }
+        centreMap(on: d)
     }
 
     /// The one thing the screen asks for (Space).
