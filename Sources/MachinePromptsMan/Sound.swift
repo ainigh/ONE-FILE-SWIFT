@@ -8,10 +8,15 @@ final class Tones {
     private let player = AVAudioPlayerNode()
     private let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
     private var buffers: [SoundKind: AVAudioPCMBuffer] = [:]
+    private var reconfigured: NSObjectProtocol?
 
     init() {
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
+        // The output changed: the engine stopped itself; drop what was queued so the next tone starts clean.
+        reconfigured = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
+            self?.player.stop()
+        }
         buffers[.tick] = make([(1320, 0, 0.06)])
         buffers[.start] = make([(523, 0, 0.14), (784, 0.11, 0.18)])
         buffers[.timeup] = make([(880, 0, 0.16), (659, 0.17, 0.22)])

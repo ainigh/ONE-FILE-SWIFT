@@ -64,7 +64,10 @@ final class Windows {
         let mod = e.modifierFlags.contains(.command) || e.modifierFlags.contains(.control)
         let k = e.charactersIgnoringModifiers ?? ""
         let sel = s.selected.flatMap { s.nodes[$0] != nil ? $0 : nil }
-        let onBoard = m.role == .b && (m.boardOpen || s.bView() == .plan) && s.editBlock() == nil && s.coverModel() == nil
+        let boardShown = m.role == .b && (m.boardOpen || s.bView() == .plan) && s.coverModel() == nil
+        let onBoard = boardShown && s.editBlock() == nil
+        let onMap = boardShown && m.boardView == .map
+        let onMonitor = m.role == .admin && m.adTab == .monitor
         if mod && (k == "z" || k == "Z") && onBoard { if e.modifierFlags.contains(.shift) { s.redo() } else { s.undo() }; return true }
         if mod && k == "," { m.openSettings(tab: .session); return true }
         if mod || e.modifierFlags.contains(.option) { return false }
@@ -82,6 +85,8 @@ final class Windows {
         default: break
         }
         switch k.lowercased() {
+        case "f": if onMap || onMonitor { m.fitMap(); return true }
+        case "n" where sel == nil && onMap: m.centreOnDoing(); return true
         case "d": if let id = sel, onBoard, s.canPick() { s.pick(.d, id); return true }
         case "n": if let id = sel, onBoard, s.canPick() { s.pick(.n, id); return true }
         case "a": if onBoard { if let nk = s.addChild(sel ?? s.goal()) { s.selected = nk; m.renaming = nk; m.boardView = .map }; return true }
@@ -136,7 +141,8 @@ final class Windows {
         }
         if let b = band, let screen = NSScreen.main ?? NSScreen.screens.first {
             let v = screen.visibleFrame
-            b.setFrame(NSRect(x: v.minX, y: v.maxY - 44, width: v.width, height: 44), display: true)
+            let f = NSRect(x: v.minX, y: v.maxY - 44, width: v.width, height: 44)
+            if b.frame != f { b.setFrame(f, display: true) }
             if !b.isVisible { b.orderFrontRegardless() }
         }
     }

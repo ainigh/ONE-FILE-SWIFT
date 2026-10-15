@@ -20,7 +20,7 @@ struct SettingsView: View {
             HStack {
                 Text("Settings").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.ink)
                 Spacer()
-                Button("Close") { app.settingsOpen = false }.buttonStyle(LinkishStyle())
+                Button("Close") { app.settingsOpen = false }.buttonStyle(LinkishStyle()).keyboardShortcut(.cancelAction)
             }
             .padding(16)
             Seg(items: [(SettingsTab.session, "Session"), (.model, "Assistant"), (.general, "General"), (.schedule, "Schedule")], selection: $app.settingsTab)
@@ -45,6 +45,10 @@ struct SettingsView: View {
                 } else {
                     Button("Revert") { load(s) }.buttonStyle(MPMButtonStyle(kind: .small))
                     Button("Save") {
+                        guard let m = Int(minutes.trimmingCharacters(in: .whitespaces)), m >= 1, m <= 120 else {
+                            app.showToast("Round length: whole minutes, 1 to 120.", error: true); return
+                        }
+                        cfg.R = Double(m * 60)
                         s.saveSettings(cfg: cfg, model: model, voice: voice, namesB: nameB, namesA: nameA)
                         app.saveSettings()
                         app.settingsOpen = false
@@ -53,7 +57,7 @@ struct SettingsView: View {
             }
             .padding(12)
         }
-        .frame(width: 620, height: 560)
+        .frame(width: 620, height: 520)
         .background(Color.bg)
         .onAppear { load(s) }
     }
@@ -188,14 +192,20 @@ struct SettingsView: View {
             }
             HStack {
                 TextField("09:00", text: $newAt).textFieldStyle(.roundedBorder).frame(width: 70)
-                TextField("What to look at", text: $newWhy).textFieldStyle(.roundedBorder)
-                Button("Add") {
-                    let at = newAt.trimmingCharacters(in: .whitespaces), why = newWhy.trimmingCharacters(in: .whitespaces)
-                    guard at.range(of: "^\\d{2}:\\d{2}$", options: .regularExpression) != nil, !why.isEmpty else { app.showToast("A time like 09:00 and what to look at.", error: true); return }
-                    app.addSchedule(at: at, why: why); newWhy = ""
-                }.buttonStyle(MPMButtonStyle(kind: .smallPrimary))
+                TextField("What to look at", text: $newWhy).textFieldStyle(.roundedBorder).onSubmit(addEntry)
+                Button("Add", action: addEntry).buttonStyle(MPMButtonStyle(kind: .smallPrimary))
             }
         }
+    }
+
+    /// A look-in: a time of day as HH:MM, and what to look at.
+    private func addEntry() {
+        let at = newAt.trimmingCharacters(in: .whitespaces), why = newWhy.trimmingCharacters(in: .whitespaces)
+        let parts = at.split(separator: ":").map(String.init)
+        guard parts.count == 2, parts[0].count == 2, parts[1].count == 2, let h = Int(parts[0]), let m = Int(parts[1]), h < 24, m < 60, !why.isEmpty else {
+            app.showToast("A time like 09:00 and what to look at.", error: true); return
+        }
+        app.addSchedule(at: at, why: why); newWhy = ""
     }
 
     private func kv<V: View>(_ k: String, _ sub: String, @ViewBuilder _ v: () -> V) -> some View {

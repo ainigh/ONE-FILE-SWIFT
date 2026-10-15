@@ -24,10 +24,27 @@ struct BoardView: View {
             }
             BoardTop()
             if app.boardView == .map {
-                HStack(spacing: 0) {
-                    StrategyMap()
-                    Rectangle().fill(Color.line).frame(width: 1)
-                    InspectorView().frame(width: 260)
+                GeometryReader { g in
+                    HStack(spacing: 0) {
+                        StrategyMap()
+                            .overlay(alignment: .top) {
+                                if let d = app.depFor {
+                                    HStack(spacing: 10) {
+                                        Text("Choose what “\(s.title(d) ?? "")” waits for").font(Theme.body).foregroundStyle(Color.ink)
+                                        Button("Esc · cancel") { app.depFor = nil }.buttonStyle(MPMButtonStyle(kind: .small))
+                                    }
+                                    .padding(.horizontal, 12).padding(.vertical, 6)
+                                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.surface))
+                                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.doing.opacity(0.7)))
+                                    .padding(.top, 8)
+                                }
+                            }
+                        // The inspector needs room; narrower, the context menu carries the same actions.
+                        if g.size.width >= 900 {
+                            Rectangle().fill(Color.line).frame(width: 1)
+                            InspectorView().frame(width: 260)
+                        }
+                    }
                 }
             } else {
                 GridTable(forA: false)
@@ -36,6 +53,7 @@ struct BoardView: View {
                 TextField("Add a step under the selection", text: $quick)
                     .textFieldStyle(.roundedBorder)
                     .disabled(blk != nil)
+                    .onChange(of: quick) { _, v in if v.count > 60 { quick = String(v.prefix(60)) } }
                     .onSubmit {
                         let v = quick.trimmingCharacters(in: .whitespaces)
                         guard !v.isEmpty else { return }
@@ -52,7 +70,7 @@ struct BoardView: View {
             }
             .padding(.horizontal, 14).padding(.bottom, 8)
         }
-        .opacity(blk != nil ? 0.85 : 1)
+        .opacity(blk != nil ? 0.6 : 1)
     }
 
     private func hint(_ s: Session) -> String {
@@ -110,7 +128,7 @@ struct StrategyMap: View {
         let props = s.mapProps()
         let spec = MapSpec(root: hub, tops: tops, kids: { s.kids($0) }, parent: { s.nodes[$0]?.parent }, ids: Array(s.nodes.keys),
                            side: { _, i in i % 2 == 1 ? "l" : "r" },
-                           height: { $0 == hub ? 84 : 48 },
+                           height: { $0 == hub ? 100 : 52 },
                            below: { id in props.contains { $0.targets[0] == id } ? 34 : 0 },
                            folded: app.folded)
         var links: [MapLink] = []
@@ -126,11 +144,8 @@ struct StrategyMap: View {
                            if app.depFor != nil { app.depFor = nil } else if s.selected != nil { s.selected = nil }
                        },
                        onFold: { id in if app.folded.contains(id) { app.folded.remove(id) } else { app.folded.insert(id) } },
-                       now: {
-                           let d = s.canPick() ? s.commitPair().d : s.slot(.doing)
-                           if let d = d { s.selected = d; var p = s.nodes[d]?.parent; while let q = p { app.folded.remove(q); p = s.nodes[q]?.parent } }
-                           else { app.showToast("Nothing is Doing yet.", error: false) }
-                       },
+                       now: { app.centreOnDoing() },
+                       fitTick: app.mapFit, centreOn: app.mapCentre, centreTick: app.mapCentreTick,
                        card: { id, _ in StepCard(id: id) },
                        overlay: { id, _ in
                            if let p = props.first(where: { $0.targets[0] == id }) {
@@ -152,13 +167,14 @@ struct StepCard: View {
     @EnvironmentObject var app: AppModel
     let id: NodeID
     @State private var hovering = false
+    @State private var leave: DispatchWorkItem?
     @State private var draft = ""
     @FocusState private var renameFocus: Bool
 
     var body: some View {
         let s = app.session
         if let n = s.nodes[id] {
-            let ds = mapStatus(s, id)
+            let ds = s.mapStatus(id)
             let editable = s.editBlock() == nil
             let selected = s.selected == id
             let aimable = app.depFor != nil && app.depFor != id && !n.root
@@ -168,11 +184,10 @@ struct StepCard: View {
                     .onTapGesture(count: 2) { if editable { s.selected = id; app.renaming = id; draft = n.title } else { app.showToast(s.editBlock() ?? "", error: true) } }
                     .onTapGesture {
                         if let f = app.depFor { if n.root { return }; app.depFor = nil; if f != id { s.addDep(f, on: id) }; return }
-                        if selected && editable && app.renaming != id { app.renaming = id; draft = n.title; return }
+                        if app.renaming != nil && app.renaming != id { app.renaming = nil }
                         s.selected = selected ? nil : id
                     }
                     .contextMenu { NodeMenu(id: id) }
-                    .onHover { hovering = $0 }
                 if hovering || app.renaming == id, let picks = pickButtons(s, n), !picks.isEmpty, app.renaming != id, app.depFor == nil, !n.root, editable {
                     HStack(spacing: 4) {
                         ForEach(Array(picks.enumerated()), id: \.offset) { _, p in
@@ -191,19 +206,17 @@ struct StepCard: View {
                     .transition(.opacity)
                 }
             }
+            // The pills sit above the card's edge: the hover region is the whole stack, and leaving
+            // it waits a moment, so the pointer can reach a pill without the pills vanishing.
+            .onHover { inside in
+                leave?.cancel()
+                if inside { hovering = true } else {
+                    let w = DispatchWorkItem { hovering = false }
+                    leave = w
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: w)
+                }
+            }
         }
-    }
-
-    private func mapStatus(_ s: Session, _ id: NodeID) -> DisplayStatus {
-        let n = s.nodes[id]!
-        if n.root { return .open }
-        if s.canPick() && !s.isClosed(id) {
-            let p = s.commitPair()
-            if p.d == id { return .doing }
-            if p.n == id { return .next }
-            return s.isBlocked(id) ? .blocked : .open
-        }
-        return s.displayStatus(id)
     }
 
     /// Hover a step: Doing and Next while B plans; Mark done on Doing or Next during a round.
@@ -277,8 +290,11 @@ struct StepCard: View {
             .background(RoundedRectangle(cornerRadius: 4).fill(Color.surface2))
             .focused($renameFocus)
             .onAppear { draft = n.title; renameFocus = true }
+            .onChange(of: draft) { _, v in if v.count > 60 { draft = String(v.prefix(60)) } }
             .onSubmit { app.renaming = nil; s.rename(id, draft) }
             .onExitCommand { app.renaming = nil }
+            // Clicking elsewhere commits too, as on the page.
+            .onChange(of: renameFocus) { _, f in if !f, app.renaming == id { app.renaming = nil; s.rename(id, draft) } }
     }
 }
 
@@ -295,11 +311,18 @@ struct NodeMenu: View {
             } else {
                 if !n.root {
                     if s.canPick() {
-                        Button(s.picks.d == id ? "Clear Doing" : "Set as Doing") { s.pick(.d, id) }.disabled(s.picks.d != id && s.pickReason(id, .d) != nil)
-                        Button(s.picks.n == id ? "Clear Next" : "Set as Next") { s.pick(.n, id) }.disabled(s.picks.n != id && s.pickReason(id, .n) != nil)
+                        let whyD = s.picks.d == id ? nil : s.pickReason(id, .d), whyN = s.picks.n == id ? nil : s.pickReason(id, .n)
+                        Button((s.picks.d == id ? "Clear Doing" : "Set as Doing") + (whyD.map { " — \($0)" } ?? "")) { s.pick(.d, id) }.disabled(whyD != nil)
+                        Button((s.picks.n == id ? "Clear Next" : "Set as Next") + (whyN.map { " — \($0)" } ?? "")) { s.pick(.n, id) }.disabled(whyN != nil)
+                        Divider()
+                    } else {
+                        Text("Doing and Next are chosen when you plan.")
                         Divider()
                     }
-                    if s.finished(id) { Button("Mark Open") { s.reopen(id) }.disabled(!s.unfinishedDeps(id).isEmpty) }
+                    if s.finished(id) {
+                        let w = s.unfinishedDeps(id).first.map { "Waiting for \(s.title($0) ?? "")." }
+                        Button("Mark Open" + (w.map { " — \($0)" } ?? "")) { s.reopen(id) }.disabled(w != nil)
+                    }
                     else if n.status != .crossed { Button("Mark Done") { s.markDone(id) } }
                     if n.status == .crossed { Button("Restore") { s.restore(id) } } else { Button("Cross Out") { s.crossOut(id) } }
                     Divider()
@@ -327,12 +350,14 @@ struct InspectorView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 if let id = s.selected, let n = s.nodes[id] {
-                    let ds = n.root ? DisplayStatus.open : s.displayStatus(id)
+                    let ds = s.mapStatus(id)
                     TextField(n.root ? "Goal" : "Step", text: $name)
                         .textFieldStyle(.roundedBorder).font(.system(size: 13, weight: .semibold))
                         .disabled(s.editBlock() != nil)
                         .onAppear { name = n.title }
                         .onChange(of: id) { _, _ in name = n.title }
+                        .onChange(of: n.title) { _, t in name = t }
+                        .onChange(of: name) { _, v in if v.count > 60 { name = String(v.prefix(60)) } }
                         .onSubmit { s.rename(id, name) }
                     let path = s.pathOf(id)
                     if !path.isEmpty { Text(path.joined(separator: "  ›  ")).font(Theme.fine).foregroundStyle(Color.ink3) }
@@ -372,7 +397,8 @@ struct InspectorView: View {
     private func row<V: View>(_ k: String, @ViewBuilder _ v: () -> V) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Label2(k)
-            HStack(spacing: 4) { v() }.font(Theme.fine)
+            // Chips wrap onto new lines when a step waits for several.
+            Flow(spacing: 4) { v() }.font(Theme.fine)
         }
     }
 
@@ -442,14 +468,14 @@ struct GridTable: View {
     var body: some View {
         let s = app.session
         let rounds = s.rounds.keys.sorted()
-        let k = app.gridRound
+        let k = s.rounds[app.gridRound] != nil ? app.gridRound : 0
         let info = k > 0 ? s.rounds[k] : nil
         let live = k == 0 || info?.end == nil
         let base: [NodeID: DisplayStatus]? = k > 0 ? info?.start : (s.round > 0 ? s.rounds[s.round]?.start : nil)
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 Text("Round").font(Theme.fine).foregroundStyle(Color.ink2)
-                Seg(items: rounds.map { ($0, String($0)) } + [(0, "Now")], selection: $app.gridRound)
+                Seg(items: rounds.map { ($0, String($0)) } + [(0, "Now")], selection: Binding(get: { k }, set: { app.gridRound = $0 }))
                 Text((k > 0 ? "Round \(k)" + (info?.end != nil ? ", as it ended" : ", in progress") : s.round > 0 ? "Now; changes since round \(s.round) started" : "Now") + ". Read only: the System writes it from the plan.")
                     .font(Theme.fine).foregroundStyle(Color.ink3)
                 Spacer()
@@ -472,15 +498,15 @@ struct GridTable: View {
                                 let was = base.map { $0[id] ?? .new } ?? stt
                                 let waits = n.deps.filter { s.nodes[$0] != nil }.map { (s.title($0) ?? "") + (s.finished($0) ? " ✓" : "") }
                                 HStack(spacing: 0) {
-                                    Text(n.title).font(.system(size: 12.5, weight: n.root ? .semibold : .regular)).foregroundStyle(Color.ink)
-                                        .strikethrough(stt == .crossed).padding(.leading, CGFloat(10 + depth * 18)).frame(maxWidth: .infinity, alignment: .leading)
+                                    Text(n.title).font(.system(size: 12.5, weight: n.root ? .semibold : .regular)).foregroundStyle(Color.ink).lineLimit(1)
+                                        .strikethrough(stt == .crossed).padding(.leading, CGFloat(10 + depth * 18)).frame(maxWidth: .infinity, alignment: .leading).help(n.title)
                                     Text(stt.word).font(Theme.fine).foregroundStyle(Theme.status(stt)).frame(width: 90, alignment: .leading)
                                     Text(was != stt ? "\(was.word) → \(stt.word)" : "").font(Theme.fine).foregroundStyle(Color.ink2).frame(width: 150, alignment: .leading)
-                                    Text(waits.isEmpty ? "—" : waits.joined(separator: ", ")).font(Theme.fine).foregroundStyle(waits.isEmpty ? Color.ink3 : .ink2).lineLimit(1).frame(width: 170, alignment: .leading)
+                                    Text(waits.isEmpty ? "—" : waits.joined(separator: ", ")).font(Theme.fine).foregroundStyle(waits.isEmpty ? Color.ink3 : .ink2).lineLimit(1).frame(width: 170, alignment: .leading).help(waits.joined(separator: ", "))
                                     Text(Format.updatedWord(n.updated, now: s.W)).font(Theme.fine).foregroundStyle(Color.ink2).frame(width: 90, alignment: .leading)
                                 }
                                 .padding(.vertical, 5)
-                                .background(s.selected == id ? Color.surface2 : was != stt ? Color.doing.opacity(0.06) : Color.clear)
+                                .background(s.selected == id ? Color.doing.opacity(0.12) : was != stt ? Color.done.opacity(0.08) : Color.clear)
                                 .contentShape(Rectangle())
                                 .onTapGesture { s.selected = id }
                                 Rectangle().fill(Color.line).frame(height: 1)
@@ -491,8 +517,36 @@ struct GridTable: View {
             }
         }
         .padding(14)
-        .onAppear { if app.gridRound > 0 && s.rounds[app.gridRound] == nil { app.gridRound = 0 } }
     }
 
     private func head(_ t: String) -> some View { Label2(t) }
+}
+
+/// Chips in a row that wraps, as the page's inline chips do.
+struct Flow: Layout {
+    var spacing: CGFloat = 4
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let w = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0, maxW: CGFloat = 0
+        for v in subviews {
+            let sz = v.sizeThatFits(.unspecified)
+            if x > 0 && x + sz.width > w { x = 0; y += rowH + spacing; rowH = 0 }
+            x += sz.width + spacing
+            rowH = max(rowH, sz.height)
+            maxW = max(maxW, x - spacing)
+        }
+        return CGSize(width: w == .infinity ? maxW : w, height: y + rowH)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
+        for v in subviews {
+            let sz = v.sizeThatFits(.unspecified)
+            if x > 0 && x + sz.width > bounds.width { x = 0; y += rowH + spacing; rowH = 0 }
+            v.place(at: CGPoint(x: bounds.minX + x, y: bounds.minY + y), proposal: ProposedViewSize(sz))
+            x += sz.width + spacing
+            rowH = max(rowH, sz.height)
+        }
+    }
 }

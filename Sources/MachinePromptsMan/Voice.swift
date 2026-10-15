@@ -55,8 +55,8 @@ enum VoiceSettings {
 
     /// The Mac's own voice standing in for the chosen one: the best it has of the same sex.
     static func systemVoice() -> AVSpeechSynthesisVoice? {
-        let language = Locale.current.language.languageCode?.identifier ?? "en"
-        let all = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix(language) && !novelty.contains($0.name) }
+        // Everything the app says is English, whatever the Mac's language.
+        let all = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("en") && !novelty.contains($0.name) }
         let infos = all.map { v -> VoiceInfo in
             let quality: VoiceInfo.Quality = v.quality == .premium ? .premium : v.quality == .enhanced ? .enhanced : .standard
             let female: Bool? = v.gender == .female ? true : v.gender == .male ? false : nil
@@ -110,6 +110,9 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     private let player = AVAudioPlayerNode()
     private var lines: [String] = []
     private var ahead: (text: String, audio: Task<[Float], Error>)?
+    /// The sentence being made right now, so a stop can cancel it.
+    private var rendering: Task<[Float], Error>?
+    private var reconfigured: NSObjectProtocol?
     /// A sentence is being made or played.
     private var busy = false
     /// Counts stops, so audio made or played for what was stopped is dropped.
@@ -130,6 +133,24 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         synth.delegate = self
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: VoiceSettings.format)
+        // The output changed (AirPods came on): the engine stopped itself and the line playing
+        // will never report back. Drop that line and go on with the rest.
+        reconfigured = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
+            self?.outputChanged()
+        }
+    }
+
+    deinit {
+        if let reconfigured { NotificationCenter.default.removeObserver(reconfigured) }
+    }
+
+    private func outputChanged() {
+        guard busy || speaking else { return }
+        epoch += 1                                   // the old line's callback is dropped
+        player.stop()
+        if engine.isRunning { engine.stop() }
+        busy = false
+        if ahead != nil || !lines.isEmpty { next() } else if queued.isEmpty { finished() }
     }
 
     func say(_ text: String) {
@@ -143,14 +164,19 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         speaking = true
         // Kokoro once it's there (and the Mac's voice isn't part way through something).
         if !Neural.shared.voices.isReady || !queued.isEmpty {
-            _ = Neural.shared.voiceModel()
-            let u = VoiceSettings.systemUtterance(text)
-            queued.insert(ObjectIdentifier(u))
-            synth.speak(u)
+            Neural.shared.wantVoices()
+            systemSay(text)
             return
         }
         lines += parts
         if !busy { next() }
+    }
+
+    /// The Mac's own voice reads it (Kokoro isn't there, or couldn't make this line).
+    private func systemSay(_ text: String) {
+        let u = VoiceSettings.systemUtterance(text)
+        queued.insert(ObjectIdentifier(u))
+        synth.speak(u)
     }
 
     func stop() {
@@ -158,6 +184,8 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         lines = []
         ahead?.audio.cancel()
         ahead = nil
+        rendering?.cancel()
+        rendering = nil
         busy = false
         player.stop()
         if engine.isRunning { engine.stop() }
@@ -207,12 +235,23 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
             return
         }
         busy = true
+        rendering = line.audio
         let mine = epoch
         Task.detached { [weak self] in
-            let audio = try? await line.audio.value
+            var audio: [Float] = []
+            var problem: String?
+            do { audio = try await line.audio.value } catch { problem = error.localizedDescription }
             DispatchQueue.main.async {
                 guard let self, mine == self.epoch else { return }
-                self.play(line.text, audio ?? [])
+                self.rendering = nil
+                if audio.isEmpty {
+                    // Kokoro couldn't make this one: the Mac's voice reads it, and the rest follows after.
+                    Updater.log("kokoro couldn't render \"\(line.text)\": \(problem ?? "no audio")")
+                    self.busy = false
+                    self.systemSay(line.text)
+                    return
+                }
+                self.play(line.text, audio)
             }
         }
     }
@@ -281,7 +320,8 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
     private func ended(_ u: AVSpeechUtterance) {
         guard queued.remove(ObjectIdentifier(u)) != nil, queued.isEmpty else { return }
-        if !lines.isEmpty || busy { return }
+        if busy { return }
+        if ahead != nil || !lines.isEmpty { next(); return }
         finished()
     }
 
@@ -308,6 +348,7 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
     /// Says a few words in the chosen voice, so choosing one lets you hear it.
     static func preview() {
+        AppModel.shared.speaker.stop()               // not over a live announcement
         sampler.stop()
         sampler.say("Hi, I'm \(VoiceSettings.voice.name). This is how I sound.")
     }
@@ -505,7 +546,7 @@ final class Listener: ObservableObject {
 
     /// Writes down the oldest waiting phrase, then the next, one at a time so they stay in order.
     private func writeNext() {
-        guard !writing, let item = waiting.first else {
+        guard !writing, !guessing, let item = waiting.first else {
             if !writing && waiting.isEmpty { finishing = false }
             return
         }
@@ -565,7 +606,10 @@ final class Listener: ObservableObject {
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.guessing = false
-                guard mine == (self.generation, self.phraseNumber), self.on, !self.held, self.waiting.isEmpty else { return }
+                guard mine == (self.generation, self.phraseNumber), self.on, !self.held, self.waiting.isEmpty else {
+                    self.writeNext()                 // a phrase ended while the guess ran
+                    return
+                }
                 self.guess = said.trimmingCharacters(in: .whitespacesAndNewlines)
                 self.text = Self.join(self.done, self.guess)
             }

@@ -29,6 +29,14 @@ final class Neural: ObservableObject {
 
     private var voiceLoad: Task<KokoroAneManager, Error>?
     private var earLoad: Task<AsrManager, Error>?
+    private var voiceFailedAt: Date?
+
+    /// Start getting Kokoro if it isn't here, but after a failure (no network) wait five minutes
+    /// before trying again, so every announcement doesn't start a download.
+    func wantVoices() {
+        if case .failed = voices, let t = voiceFailedAt, Date().timeIntervalSince(t) < 300 { return }
+        _ = voiceModel()
+    }
 
     /// Kokoro, loading it if it isn't yet. On the main thread.
     func voiceModel() -> Task<KokoroAneManager, Error> {
@@ -48,7 +56,8 @@ final class Neural: ObservableObject {
                 case .success: self.voices = .ready
                 case .failure(let error):
                     self.voices = .failed(error.localizedDescription)
-                    self.voiceLoad = nil       // try again next time
+                    self.voiceFailedAt = Date()
+                    self.voiceLoad = nil       // try again later
                 }
             }
         }

@@ -176,6 +176,20 @@ extension Session {
         }
     }
 
+    /// What a step reads as on the board (board.js mapStatus): while B may pick, the picks show as
+    /// Doing and Next before they are committed; otherwise the stored status.
+    public func mapStatus(_ id: NodeID) -> DisplayStatus {
+        guard let n = nodes[id] else { return .new }
+        if n.root { return .open }
+        if canPick() && !isClosed(id) {
+            let p = commitPair()
+            if p.d == id { return .doing }
+            if p.n == id { return .next }
+            return isBlocked(id) ? .blocked : .open
+        }
+        return displayStatus(id)
+    }
+
     // MARK: The intake (what B types first)
 
     public enum IntakeStage { case name, time, ask, ready }

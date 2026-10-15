@@ -34,8 +34,10 @@ jobs:
         # The branch name goes in through the environment, never pasted into the script: a ref
         # name may contain $( ) or ; and would otherwise run as shell.
         env:
-          BRANCH: ${{ github.ref_name }}
+          # On a pull_request run ref_name is "N/merge", a ref no installed copy could follow.
+          BRANCH: ${{ github.head_ref || github.ref_name }}
           VERSION: 1.0.${{ github.run_number }}
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           UNIVERSAL=1 scripts/make-app.sh

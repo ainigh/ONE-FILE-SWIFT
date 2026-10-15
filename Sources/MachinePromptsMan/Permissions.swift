@@ -61,7 +61,7 @@ enum OutputFolder {
 
     struct NoFolder: LocalizedError {
         var errorDescription: String? {
-            "no output folder chosen (right-click the menubar icon → Choose Output Folder…)"
+            "no folder chosen (right-click the menubar icon → Transcript Folder…)"
         }
     }
 

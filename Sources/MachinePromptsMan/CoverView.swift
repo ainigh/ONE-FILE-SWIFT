@@ -105,6 +105,7 @@ struct ANoticeView: View {
                 TextField("Reason, shown to \(s.bName) (needed to refuse)", text: $reason)
                     .textFieldStyle(.roundedBorder)
                     .onAppear { reason = r.policy?.verdict == .refused ? (r.policy?.reason ?? "") : "" }
+                    .onChange(of: r.id) { _ in reason = r.policy?.verdict == .refused ? (r.policy?.reason ?? "") : "" }
                 let cant = s.cannotApprove(r)
                 HStack(spacing: 8) {
                     Button("Approve") { s.decide(r.id, .approved, "", by: .a) }

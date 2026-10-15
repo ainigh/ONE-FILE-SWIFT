@@ -140,10 +140,15 @@ struct MapView<CardContent: View, Overlay: View>: View {
     var onBackground: () -> Void
     var onFold: (String) -> Void
     var now: (() -> Void)?
+    /// Fit when this changes (F); scroll to `centreOn` and zoom in when `centreTick` changes (N).
+    var fitTick = 0
+    var centreOn: String? = nil
+    var centreTick = 0
     @ViewBuilder var card: (String, MapPos) -> CardContent
     @ViewBuilder var overlay: (String, MapPos) -> Overlay
 
     @State private var zoom: CGFloat? = nil
+    @State private var pinchStart: CGFloat? = nil
     @State private var hover: String?
 
     var body: some View {
@@ -152,6 +157,7 @@ struct MapView<CardContent: View, Overlay: View>: View {
             let pad: CGFloat = 28
             let bw = L.bounds.width + pad * 2, bh = L.bounds.height + pad * 2
             let avail = CGSize(width: max(1, geo.size.width), height: max(1, geo.size.height - 68))
+            let inner = CGSize(width: max(0, geo.size.width), height: max(0, geo.size.height - 68))
             let fitK = max(0.55, min(1, min(avail.width / max(bw, 1), avail.height / max(bh, 1))))
             let k = zoom ?? fitK
             ZStack(alignment: .topLeading) {
@@ -159,6 +165,7 @@ struct MapView<CardContent: View, Overlay: View>: View {
                 if L.hub == nil {
                     Text(empty).font(Theme.body).foregroundStyle(Color.ink3).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
+                    ScrollViewReader { proxy in
                     ScrollView([.horizontal, .vertical], showsIndicators: false) {
                         ZStack(alignment: .topLeading) {
                             Color.clear.contentShape(Rectangle()).onTapGesture { onBackground() }
@@ -205,12 +212,14 @@ struct MapView<CardContent: View, Overlay: View>: View {
                                 }
                             }
                             .frame(width: bw, height: bh)
+                            .allowsHitTesting(false)
                             ForEach(Array(L.pos.keys).sorted(), id: \.self) { id in
                                 if let q = L.pos[id] {
                                     card(id, q)
                                         .frame(width: q.w, height: q.h)
                                         .position(x: q.x - L.bounds.minX + pad, y: q.y - L.bounds.minY + pad)
                                         .onHover { hover = $0 ? id : (hover == id ? nil : hover) }
+                                        .id(id)
                                     overlay(id, q)
                                         .position(x: q.x - L.bounds.minX + pad, y: q.y + q.h / 2 + q.below / 2 - L.bounds.minY + pad)
                                     if id != L.hub, !spec.kids(id).isEmpty {
@@ -232,7 +241,21 @@ struct MapView<CardContent: View, Overlay: View>: View {
                         .frame(width: bw, height: bh)
                         .scaleEffect(k, anchor: .topLeading)
                         .frame(width: bw * k, height: bh * k)
-                        .frame(minWidth: geo.size.width, minHeight: geo.size.height - 68)
+                        .frame(minWidth: inner.width, minHeight: inner.height)
+                    }
+                    .gesture(MagnifyGesture()
+                        .onChanged { v in
+                            let start = pinchStart ?? (zoom ?? fitK)
+                            pinchStart = start
+                            zoom = min(2.2, max(0.3, start * v.magnification))
+                        }
+                        .onEnded { _ in pinchStart = nil })
+                    .onChange(of: fitTick) { _, _ in zoom = nil }
+                    .onChange(of: centreTick) { _, _ in
+                        guard let c = centreOn, L.pos[c] != nil else { return }
+                        zoom = max(zoom ?? fitK, 1)
+                        DispatchQueue.main.async { withAnimation(.easeInOut(duration: 0.25)) { proxy.scrollTo(c, anchor: .center) } }
+                    }
                     }
                 }
                 // Zoom, Fit, Now, and the legend, along the bottom.

@@ -7,6 +7,7 @@
 #
 # Environment:
 #   VERSION         CFBundleShortVersionString (default: from Info.plist, e.g. 1.0)
+#   BUILD_NUMBER    CFBundleVersion, digits only (default: the minute of the build, yyyymmddHHMM)
 #   COMMIT          the commit it was built from (default: git HEAD, if this is a checkout)
 #   BRANCH          the branch the in-app updater follows (default: main)
 #   UNIVERSAL=1     arm64 + x86_64 (CI); default builds only this Mac's architecture
@@ -21,6 +22,7 @@ APP="build/$NAME.app"
 PB=/usr/libexec/PlistBuddy
 PLIST_VERSION="$($PB -c 'Print CFBundleShortVersionString' Info.plist 2>/dev/null || echo 1.0)"
 VERSION="${VERSION:-$PLIST_VERSION}"
+BUILD_NUMBER="${BUILD_NUMBER:-$(date +%Y%m%d%H%M)}"
 COMMIT="${COMMIT:-$(git rev-parse HEAD 2>/dev/null || echo unknown)}"
 BRANCH="${BRANCH:-main}"
 
@@ -73,7 +75,8 @@ for bundle in "$BINDIR"/*.bundle; do
 done
 cp Info.plist "$APP/Contents/Info.plist"
 $PB -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
-$PB -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
+# CFBundleVersion must be numbers and dots: a "1.0-abc1234" there confuses Launch Services.
+$PB -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP/Contents/Info.plist"
 $PB -c "Add :MPMCommit string $COMMIT" "$APP/Contents/Info.plist"
 $PB -c "Add :MPMBranch string $BRANCH" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
@@ -90,7 +93,8 @@ else
   codesign --force --sign - --timestamp=none --identifier "$BUNDLE_ID" \
     --requirements "=designated => identifier \"$BUNDLE_ID\"" "$APP"
 fi
-codesign --verify --verbose=1 "$APP"
+# The same check the in-app updater makes before it swaps a bundle in.
+codesign --verify --deep --strict --verbose=1 "$APP"
 
 ditto -c -k --keepParent "$APP" "build/$NAME.zip"
 echo "==> built $(pwd)/$APP ($VERSION, $BRANCH, ${COMMIT:0:7})"
